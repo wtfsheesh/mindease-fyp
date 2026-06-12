@@ -8,7 +8,7 @@ import os
 class GeminiChatbot:
     def __init__(self, api_key=None):
         # Cleans up and stores your exact API key string
-        self.api_key = (api_key or os.getenv('GEMINI_API_KEY') or "REDACTED").strip()
+        self.api_key = (api_key or os.getenv('GEMINI_API_KEY') or "").strip()
         
         # gemini-2.0-flash is the current free-tier model (1.5-flash is deprecated)
         self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.api_key}"
