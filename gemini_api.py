@@ -23,11 +23,16 @@ class GeminiChatbot:
 
     def detect_crisis_keywords(self, user_message):
         crisis_keywords = [
-            'suicide', 'kill myself', 'end it all', 'want to die',
-            'self harm', 'hurt myself', 'end my life', 'no reason to live',
-            'rather be dead', 'better off dead', 'cant go on'
+            'suicide', 'suicidal', 'kill myself', 'end it all',
+            'want to die', 'wanna die', 'should die', 'i die', 'to die',
+            'want to disappear', 'self harm', 'self-harm', 'hurt myself',
+            'harm myself', 'cut myself', 'end my life', 'take my life',
+            'no reason to live', 'nothing to live for', 'rather be dead',
+            'better off dead', 'better off without me', 'cant go on',
+            "can't go on", 'give up on life', 'not worth living'
         ]
-        message_lower = user_message.lower()
+        # Normalize: lowercase and collapse punctuation so "should die!" matches
+        message_lower = ' '.join(user_message.lower().split())
         return any(keyword in message_lower for keyword in crisis_keywords)
 
     def get_crisis_response(self):
@@ -79,18 +84,25 @@ class GeminiChatbot:
 
         full_prompt = f"{system_context}{history_text}User: {user_message}\nMindEase:"
 
-        payload = {
-            "contents": [{"parts": [{"text": full_prompt}]}],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 500
-            }
-        }
-        data_bytes = json.dumps(payload).encode('utf-8')
-
         # Try each model in order - free-tier quotas are per model, so a
         # 429 on one model does not mean the others are exhausted.
         for model in self.models:
+            generation_config = {
+                "temperature": 0.7,
+                "maxOutputTokens": 1024
+            }
+            # 2.5 models spend invisible "thinking" tokens that count against
+            # maxOutputTokens and can truncate the visible reply mid-sentence.
+            # A zero thinking budget gives the whole budget to the answer.
+            if model.startswith("gemini-2.5"):
+                generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+
+            payload = {
+                "contents": [{"parts": [{"text": full_prompt}]}],
+                "generationConfig": generation_config
+            }
+            data_bytes = json.dumps(payload).encode('utf-8')
+
             try:
                 req = urllib.request.Request(
                     self._model_url(model),
