@@ -7,10 +7,15 @@ import os
 
 class GeminiChatbot:
     def __init__(self, api_key=None):
-        # Cleans up and stores your exact API key string
-        self.api_key = (api_key or os.getenv('GEMINI_API_KEY') or "").strip()
+        # One or more API keys. The daily free-tier quota is per Google Cloud
+        # project, so a backup key created in a different project keeps the
+        # chatbot alive when the primary key's daily quota is exhausted.
+        # .env supports either GEMINI_API_KEY or comma-separated GEMINI_API_KEYS.
+        raw = (api_key or os.getenv('GEMINI_API_KEYS')
+               or os.getenv('GEMINI_API_KEY') or "")
+        self.api_keys = [k.strip() for k in raw.split(',') if k.strip()]
 
-        # Each model has its own free-tier quota, so if one is rate-limited
+        # Each model also has its own quota, so if one is rate-limited
         # (HTTP 429) the next one is tried automatically.
         self.models = [
             "gemini-2.5-flash",
@@ -18,8 +23,13 @@ class GeminiChatbot:
             "gemini-2.0-flash-lite",
         ]
 
-    def _model_url(self, model):
-        return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={self.api_key}"
+    @property
+    def api_key(self):
+        # Kept for backward compatibility with code that reads .api_key
+        return self.api_keys[0] if self.api_keys else ""
+
+    def _model_url(self, model, key):
+        return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
 
     def detect_crisis_keywords(self, user_message):
         crisis_keywords = [
@@ -84,8 +94,9 @@ class GeminiChatbot:
 
         full_prompt = f"{system_context}{history_text}User: {user_message}\nMindEase:"
 
-        # Try each model in order - free-tier quotas are per model, so a
-        # 429 on one model does not mean the others are exhausted.
+        # Try each model in order, and within each model try every API key.
+        # Free-tier quotas are per model AND per project (key), so a 429 on
+        # one combination does not mean the others are exhausted.
         for model in self.models:
             generation_config = {
                 "temperature": 0.7,
@@ -103,25 +114,26 @@ class GeminiChatbot:
             }
             data_bytes = json.dumps(payload).encode('utf-8')
 
-            try:
-                req = urllib.request.Request(
-                    self._model_url(model),
-                    data=data_bytes,
-                    headers={'Content-Type': 'application/json'}
-                )
-                with urllib.request.urlopen(req, timeout=15) as response:
-                    response_data = json.loads(response.read().decode('utf-8'))
+            for i, key in enumerate(self.api_keys):
+                try:
+                    req = urllib.request.Request(
+                        self._model_url(model, key),
+                        data=data_bytes,
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    with urllib.request.urlopen(req, timeout=15) as response:
+                        response_data = json.loads(response.read().decode('utf-8'))
 
-                if 'candidates' in response_data and len(response_data['candidates']) > 0:
-                    parts = response_data['candidates'][0]['content'].get('parts', [])
-                    if parts and 'text' in parts[0]:
-                        return parts[0]['text'].strip()
-            except urllib.error.HTTPError as e:
-                print(f"\n[API LOG] {model}: HTTP {e.code} - trying next model\n")
-                continue
-            except Exception as e:
-                print(f"\n[API LOG] {model}: {e}\n")
-                continue
+                    if 'candidates' in response_data and len(response_data['candidates']) > 0:
+                        parts = response_data['candidates'][0]['content'].get('parts', [])
+                        if parts and 'text' in parts[0]:
+                            return parts[0]['text'].strip()
+                except urllib.error.HTTPError as e:
+                    print(f"[API LOG] {model} (key {i+1}): HTTP {e.code} - trying next", flush=True)
+                    continue
+                except Exception as e:
+                    print(f"[API LOG] {model} (key {i+1}): {e}", flush=True)
+                    continue
 
         return "I am right here listening to you. Tell me a bit more about what's on your mind."
 
