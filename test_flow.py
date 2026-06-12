@@ -113,6 +113,27 @@ check("Journal page", r.status_code == 200)
 r = client.post("/journal", data={"title": "Test Entry", "content": "Feeling better after the session.", "mood": "Calm"}, follow_redirects=False)
 check("Journal submit", r.status_code == 302)
 
+# 14b. Journal entries list, edit, delete
+r = client.get("/journal/entries")
+check("Journal entries list", r.status_code == 200 and b"Test Entry" in r.data)
+
+from models import JournalEntry
+with app.app_context():
+    user = User.query.filter_by(email=EMAIL).first()
+    entry = JournalEntry.query.filter_by(user_id=user.id).first()
+    entry_id = entry.id
+
+r = client.get(f"/journal/edit/{entry_id}")
+check("Journal edit page prefilled", r.status_code == 200 and b"Test Entry" in r.data and b"Update Entry" in r.data)
+
+r = client.post(f"/journal/edit/{entry_id}", data={"title": "Edited Title", "content": "Updated content.", "mood": "Happy"}, follow_redirects=True)
+check("Journal edit submit", r.status_code == 200 and b"Edited Title" in r.data)
+
+r = client.post(f"/journal/delete/{entry_id}", follow_redirects=True)
+with app.app_context():
+    gone = JournalEntry.query.get(entry_id) is None
+check("Journal delete", r.status_code == 200 and gone)
+
 # 15. Logout
 r = client.get("/logout", follow_redirects=True)
 check("Logout", r.status_code == 200)

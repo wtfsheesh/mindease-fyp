@@ -675,7 +675,7 @@ def journal():
             db.session.commit()
             
             flash('Journal entry saved successfully!', 'success')
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('journal_entries'))
         
         except Exception as e:
             db.session.rollback()
@@ -684,6 +684,77 @@ def journal():
             return render_template('journal.html')
     
     return render_template('journal.html')
+
+@app.route('/journal/entries')
+@login_required
+def journal_entries():
+    """
+    List all of the current user's journal entries, newest first
+    """
+    entries = JournalEntry.query.filter_by(user_id=current_user.id).order_by(
+        JournalEntry.created_at.desc()
+    ).all()
+    return render_template('journal-entries.html', entries=entries)
+
+@app.route('/journal/edit/<int:entry_id>', methods=['GET', 'POST'])
+@login_required
+def journal_edit(entry_id):
+    """
+    Edit an existing journal entry (owner only)
+    """
+    entry = JournalEntry.query.get(entry_id)
+
+    if not entry or entry.user_id != current_user.id:
+        flash('Journal entry not found.', 'error')
+        return redirect(url_for('journal_entries'))
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        content = request.form.get('content', '').strip()
+        mood = request.form.get('mood', '').strip()
+
+        if not title or not content:
+            flash('Title and content are required.', 'error')
+            return render_template('journal.html', entry=entry)
+
+        try:
+            entry.title = title
+            entry.content = content
+            entry.mood = mood if mood else None
+            db.session.commit()
+
+            flash('Journal entry updated!', 'success')
+            return redirect(url_for('journal_entries'))
+
+        except Exception as e:
+            db.session.rollback()
+            flash('Error updating journal entry.', 'error')
+            print(f"Journal edit error: {e}")
+
+    return render_template('journal.html', entry=entry)
+
+@app.route('/journal/delete/<int:entry_id>', methods=['POST'])
+@login_required
+def journal_delete(entry_id):
+    """
+    Delete a journal entry (owner only)
+    """
+    entry = JournalEntry.query.get(entry_id)
+
+    if not entry or entry.user_id != current_user.id:
+        flash('Journal entry not found.', 'error')
+        return redirect(url_for('journal_entries'))
+
+    try:
+        db.session.delete(entry)
+        db.session.commit()
+        flash('Journal entry deleted.', 'info')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error deleting journal entry.', 'error')
+        print(f"Journal delete error: {e}")
+
+    return redirect(url_for('journal_entries'))
 
 # ============================================================================
 # ROUTE 13: LOGOUT
