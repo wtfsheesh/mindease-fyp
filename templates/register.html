@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Register - MindEase{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #f4f7f6;
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+        box-sizing: border-box;
+    }
+    .login-card {
+        background: #ffffff;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        width: 100%;
+        max-width: 440px;
+        box-sizing: border-box;
+    }
+    .logo {
+        text-align: center;
+        margin-bottom: 5px;
+    }
+    .logo-icon {
+        font-size: 2.5rem;
+        margin-bottom: 5px;
+    }
+    .logo h1 {
+        margin: 0;
+        font-size: 2rem;
+        color: #333;
+    }
+    .tagline {
+        text-align: center;
+        color: #666;
+        font-size: 0.95rem;
+        margin-top: 0;
+        margin-bottom: 25px;
+    }
+    .form-group {
+        margin-bottom: 18px;
+    }
+    label {
+        display: block;
+        margin-bottom: 6px;
+        color: #555;
+        font-weight: 500;
+        font-size: 0.95rem;
+    }
+    input[type="text"], input[type="email"], input[type="password"], select {
+        width: 100%;
+        padding: 11px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        background-color: #fff;
+    }
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        background: #4A90E2;
+        border: none;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: background 0.2s;
+    }
+    .btn-primary:hover {
+        background: #357ABD;
+    }
+    .flash-message {
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        text-align: center;
+    }
+    .flash-error {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+    .register-link {
+        text-align: center;
+        margin-top: 20px;
+        font-size: 0.9rem;
+        color: #666;
+    }
+    .register-link a {
+        color: #4A90E2;
+        text-decoration: none;
+    }
+    .password-strength {
+        background-color: #eee;
+        border-radius: 3px;
+        height: 5px;
+        margin-top: 8px;
+        width: 100%;
+        overflow: hidden;
+    }
+    .strength-bar {
+        background-color: #F44336;
+        height: 100%;
+        width: 0%;
+        transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    small {
+        display: block;
+        font-size: 0.8rem;
+        color: #666;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="container">
+    <div class="login-card">
+        <div class="logo">
+            <div class="logo-icon">🧘</div>
+            <h1>MindEase</h1>
+        </div>
+        <p class="tagline">Create Your Account</p>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form action="{{ url_for('register') }}" method="POST">
+            <div class="form-group">
+                <label for="fullname">Full Name (Optional)</label>
+                <input type="text" id="fullname" name="fullname" placeholder="Enter your name">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input type="email" id="email" name="email" placeholder="Enter your email" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Create a password (min 8 characters)" required>
+                <div class="password-strength">
+                    <div class="strength-bar" id="strengthBar"></div>
+                </div>
+                <small id="strengthText">Password strength: Weak</small>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter your password" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="ageGroup">Age Group (Optional)</label>
+                <select id="ageGroup" name="ageGroup">
+                    <option value="">Select age group</option>
+                    <option value="18-24">18-24</option>
+                    <option value="25-34">25-34</option>
+                    <option value="35-44">35-44</option>
+                    <option value="45+">45+</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-primary">Create Account</button>
+            
+            <p class="register-link">
+                Already have an account? 
+                <a href="{{ url_for('login') }}">Login here</a>
+            </p>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('password').addEventListener('input', function() {
+    const password = this.value;
+    const strengthBar = document.getElementById('strengthBar');
+    const strengthText = document.getElementById('strengthText');
+    
+    let strength = 0;
+    if (password.length >= 8) strength += 33;
+    if (/[A-Z]/.test(password)) strength += 33;
+    if (/[0-9]/.test(password) || /[^A-Za-z0-9]/.test(password)) strength += 34;
+    
+    strengthBar.style.width = strength + '%';
+    
+    if (strength < 33) {
+        strengthBar.style.backgroundColor = '#F44336';
+        strengthText.textContent = 'Password strength: Weak';
+    } else if (strength < 67) {
+        strengthBar.style.backgroundColor = '#FF9800';
+        strengthText.textContent = 'Password strength: Medium';
+    } else {
+        strengthBar.style.backgroundColor = '#4CAF50';
+        strengthText.textContent = 'Password strength: Strong';
+    }
+});
+</script>
+{% endblock %}

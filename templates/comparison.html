@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Session Results - MindEase{% endblock %}
+
+{% block extra_css %}
+<style>
+.results-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+.success-banner {
+    background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 30px;
+}
+.success-banner h2 {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+.overall-score {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    text-align: center;
+    margin-bottom: 30px;
+}
+.score-display {
+    font-size: 48px;
+    font-weight: bold;
+    color: var(--text-dark);
+    margin: 20px 0;
+}
+.score-arrow {
+    font-size: 36px;
+    color: var(--success-green);
+    margin: 0 20px;
+}
+.comparison-table {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 30px;
+}
+.comparison-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.comparison-table th,
+.comparison-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-gray);
+}
+.comparison-table th {
+    background: var(--bg-gray);
+    font-weight: 600;
+}
+.change-positive {
+    color: var(--success-green);
+    font-weight: 600;
+}
+.change-negative {
+    color: var(--text-light);
+}
+.encouragement {
+    background: #E8F5E9;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid var(--success-green);
+    margin-bottom: 30px;
+}
+.action-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+.btn-secondary {
+    padding: 14px 28px;
+    background: white;
+    color: var(--primary-blue);
+    border: 2px solid var(--primary-blue);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+.btn-secondary:hover {
+    background: var(--primary-blue);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('dashboard') }}" class="btn-back">← Dashboard</a>
+        </div>
+    </div>
+</nav>
+
+<div class="results-container">
+    {% if effectiveness.overall_improvement > 0 %}
+    <div class="success-banner">
+        <div style="font-size: 64px; margin-bottom: 16px;">🎉</div>
+        <h2>Great Progress!</h2>
+        <p>Your stress levels improved after this session</p>
+    </div>
+    {% else %}
+    <div class="success-banner" style="background: linear-gradient(135deg, #9E9E9E 0%, #BDBDBD 100%);">
+        <div style="font-size: 64px; margin-bottom: 16px;">💭</div>
+        <h2>Session Complete</h2>
+        <p>Thank you for completing your session</p>
+    </div>
+    {% endif %}
+    
+    <div class="overall-score">
+        <h3 style="color: var(--text-light); margin-bottom: 20px;">Overall Score</h3>
+        <div class="score-display">
+            {{ effectiveness.pre_total }} <span class="score-arrow">→</span> {{ effectiveness.post_total }}
+        </div>
+        <p style="color: {% if effectiveness.overall_improvement > 0 %}var(--success-green){% else %}var(--text-light){% endif %}; font-size: 24px; font-weight: 600;">
+            {% if effectiveness.overall_improvement > 0 %}
+                {{ effectiveness.overall_improvement|abs|round|int }}% improvement
+            {% else %}
+                No change in overall score
+            {% endif %}
+        </p>
+    </div>
+    
+    <div class="comparison-table">
+        <h3 style="margin-bottom: 20px;">Detailed Comparison</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Dimension</th>
+                    <th>Before</th>
+                    <th>After</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Stress Level</strong></td>
+                    <td>{{ effectiveness.dimension_changes.stress.before }}</td>
+                    <td>{{ effectiveness.dimension_changes.stress.after }}</td>
+                    <td class="{% if effectiveness.dimension_changes.stress.change > 0 %}change-positive{% else %}change-negative{% endif %}">
+                        {% if effectiveness.dimension_changes.stress.change > 0 %}
+                            ↓ -{{ effectiveness.dimension_changes.stress.change }} ({{ effectiveness.dimension_changes.stress.percentage|abs|round|int }}% better)
+                        {% elif effectiveness.dimension_changes.stress.change < 0 %}
+                            ↑ +{{ effectiveness.dimension_changes.stress.change|abs }} ({{ effectiveness.dimension_changes.stress.percentage|abs|round|int }}% worse)
+                        {% else %}
+                            → No change
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Mood</strong></td>
+                    <td>{{ effectiveness.dimension_changes.mood.before }}</td>
+                    <td>{{ effectiveness.dimension_changes.mood.after }}</td>
+                    <td class="{% if effectiveness.dimension_changes.mood.change > 0 %}change-positive{% else %}change-negative{% endif %}">
+                        {% if effectiveness.dimension_changes.mood.change > 0 %}
+                            ↑ +{{ effectiveness.dimension_changes.mood.change }} ({{ effectiveness.dimension_changes.mood.percentage|abs|round|int }}% better)
+                        {% elif effectiveness.dimension_changes.mood.change < 0 %}
+                            ↓ {{ effectiveness.dimension_changes.mood.change }} ({{ effectiveness.dimension_changes.mood.percentage|abs|round|int }}% worse)
+                        {% else %}
+                            → No change
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Sleep Quality</strong></td>
+                    <td>{{ effectiveness.dimension_changes.sleep.before }}</td>
+                    <td>{{ effectiveness.dimension_changes.sleep.after }}</td>
+                    <td class="{% if effectiveness.dimension_changes.sleep.change > 0 %}change-positive{% else %}change-negative{% endif %}">
+                        {% if effectiveness.dimension_changes.sleep.change > 0 %}
+                            ↑ +{{ effectiveness.dimension_changes.sleep.change }} ({{ effectiveness.dimension_changes.sleep.percentage|abs|round|int }}% better)
+                        {% elif effectiveness.dimension_changes.sleep.change < 0 %}
+                            ↓ {{ effectiveness.dimension_changes.sleep.change }} ({{ effectiveness.dimension_changes.sleep.percentage|abs|round|int }}% worse)
+                        {% else %}
+                            → No change
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Energy Level</strong></td>
+                    <td>{{ effectiveness.dimension_changes.energy.before }}</td>
+                    <td>{{ effectiveness.dimension_changes.energy.after }}</td>
+                    <td class="{% if effectiveness.dimension_changes.energy.change > 0 %}change-positive{% else %}change-negative{% endif %}">
+                        {% if effectiveness.dimension_changes.energy.change > 0 %}
+                            ↑ +{{ effectiveness.dimension_changes.energy.change }} ({{ effectiveness.dimension_changes.energy.percentage|abs|round|int }}% better)
+                        {% elif effectiveness.dimension_changes.energy.change < 0 %}
+                            ↓ {{ effectiveness.dimension_changes.energy.change }} ({{ effectiveness.dimension_changes.energy.percentage|abs|round|int }}% worse)
+                        {% else %}
+                            → No change
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td><strong>Anxiety Level</strong></td>
+                    <td>{{ effectiveness.dimension_changes.anxiety.before }}</td>
+                    <td>{{ effectiveness.dimension_changes.anxiety.after }}</td>
+                    <td class="{% if effectiveness.dimension_changes.anxiety.change > 0 %}change-positive{% else %}change-negative{% endif %}">
+                        {% if effectiveness.dimension_changes.anxiety.change > 0 %}
+                            ↓ -{{ effectiveness.dimension_changes.anxiety.change }} ({{ effectiveness.dimension_changes.anxiety.percentage|abs|round|int }}% better)
+                        {% elif effectiveness.dimension_changes.anxiety.change < 0 %}
+                            ↑ +{{ effectiveness.dimension_changes.anxiety.change|abs }} ({{ effectiveness.dimension_changes.anxiety.percentage|abs|round|int }}% worse)
+                        {% else %}
+                            → No change
+                        {% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="encouragement">
+        <strong>Effectiveness: {{ effectiveness.effectiveness_status }} {% if effectiveness.effectiveness_status == 'IMPROVED' %}✓{% endif %}</strong>
+        <p style="margin-top: 10px;">
+            {% if effectiveness.overall_improvement > 5 %}
+                You've made excellent progress! The conversation helped improve your wellbeing. The coping strategies we discussed are working. Keep up the great work!
+            {% elif effectiveness.overall_improvement > 0 %}
+                You've made some positive progress! Even small improvements are meaningful. Keep engaging with the tools that work for you.
+            {% else %}
+                Thank you for taking time to reflect. Even though the scores stayed the same, talking through your feelings is still valuable. Consider trying again when you need support.
+            {% endif %}
+        </p>
+    </div>
+    
+    <div class="action-buttons">
+        <a href="{{ url_for('history') }}" class="btn-secondary">
+            View Session History
+        </a>
+        <a href="{{ url_for('pre_assessment') }}" class="btn-primary" style="padding: 14px 28px; text-decoration: none;">
+            Start Another Session
+        </a>
+    </div>
+</div>
+{% endblock %}

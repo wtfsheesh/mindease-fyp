@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MindEase{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+        <div class="nav-right">
+            <span class="welcome-text">Welcome, {{ user_name }}!</span>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="max-width: 1200px; margin: 20px auto; padding: 0 20px;">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="dashboard-container">
+    <div class="main-content">
+        <div class="welcome-card">
+            <h2>How are you feeling today?</h2>
+            <p>Start a new session to talk with your AI companion</p>
+            <a href="{{ url_for('pre_assessment') }}" class="btn-start-session">
+                🎯 Start New Session
+            </a>
+        </div>
+        
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_sessions }}</div>
+                <div class="stat-label">Sessions Completed</div>
+                <div class="stat-icon">💬</div>
+            </div>
+            
+            <div class="stat-card stat-success">
+                <div class="stat-number">{{ avg_stress_reduction }}%</div>
+                <div class="stat-label">Avg Stress Reduction</div>
+                <div class="stat-icon">📉</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">{{ total_journals }}</div>
+                <div class="stat-label">Journal Entries</div>
+                <div class="stat-icon">📝</div>
+            </div>
+        </div>
+        
+        {% if daily_quote %}
+        <div class="quote-card">
+            <div class="quote-icon">💬</div>
+            <p class="quote-text">"{{ daily_quote.quote_text }}"</p>
+            <p class="quote-author">— {{ daily_quote.author }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="action-list">
+                <a href="{{ url_for('breathing') }}" class="action-item">
+                    <span class="action-icon">🫁</span>
+                    <div class="action-content">
+                        <div class="action-title">Breathing Exercises</div>
+                        <div class="action-desc">3 techniques available</div>
+                    </div>
+                    <span class="action-arrow">→</span>
+                </a>
+                
+                <a href="{{ url_for('journal') }}" class="action-item">
+                    <span class="action-icon">✍️</span>
+                    <div class="action-content">
+                        <div class="action-title">New Journal Entry</div>
+                        <div class="action-desc">Reflect on your thoughts</div>
+                    </div>
+                    <span class="action-arrow">→</span>
+                </a>
+                
+                <a href="{{ url_for('history') }}" class="action-item">
+                    <span class="action-icon">📊</span>
+                    <div class="action-content">
+                        <div class="action-title">Session History</div>
+                        <div class="action-desc">View your progress</div>
+                    </div>
+                    <span class="action-arrow">→</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

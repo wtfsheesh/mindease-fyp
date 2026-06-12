@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Post-Assessment - MindEase{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+    </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="max-width: 800px; margin: 20px auto; padding: 0 20px;">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="assessment-container">
+    <div class="assessment-card">
+        <div class="progress-bar">
+            <div class="progress-text">Step 2 of 2</div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: 100%"></div>
+            </div>
+        </div>
+        
+        <h2>Post-Session Assessment</h2>
+        <p class="assessment-subtitle">How are you feeling after the session?</p>
+        
+        <form action="{{ url_for('post_assessment') }}" method="POST">
+            <div class="question-group">
+                <label class="question-label">1. Stress Level</label>
+                <p class="question-desc">How stressed do you feel now?</p>
+                <div class="rating-scale">
+                    {% for i in range(1, 6) %}
+                    <label class="rating-option">
+                        <input type="radio" name="stress" value="{{ i }}" required>
+                        <span class="rating-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rating-labels">
+                    <span>Very Low</span>
+                    <span>Very High</span>
+                </div>
+            </div>
+            
+            <div class="question-group">
+                <label class="question-label">2. Mood</label>
+                <p class="question-desc">How would you rate your mood?</p>
+                <div class="rating-scale">
+                    {% for i in range(1, 6) %}
+                    <label class="rating-option">
+                        <input type="radio" name="mood" value="{{ i }}" required>
+                        <span class="rating-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rating-labels">
+                    <span>Very Low</span>
+                    <span>Very High</span>
+                </div>
+            </div>
+            
+            <div class="question-group">
+                <label class="question-label">3. Sleep Quality</label>
+                <p class="question-desc">How do you expect to sleep tonight?</p>
+                <div class="rating-scale">
+                    {% for i in range(1, 6) %}
+                    <label class="rating-option">
+                        <input type="radio" name="sleep" value="{{ i }}" required>
+                        <span class="rating-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rating-labels">
+                    <span>Very Poor</span>
+                    <span>Very Good</span>
+                </div>
+            </div>
+            
+            <div class="question-group">
+                <label class="question-label">4. Energy Level</label>
+                <p class="question-desc">What is your energy level?</p>
+                <div class="rating-scale">
+                    {% for i in range(1, 6) %}
+                    <label class="rating-option">
+                        <input type="radio" name="energy" value="{{ i }}" required>
+                        <span class="rating-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rating-labels">
+                    <span>Very Low</span>
+                    <span>Very High</span>
+                </div>
+            </div>
+            
+            <div class="question-group">
+                <label class="question-label">5. Anxiety Level</label>
+                <p class="question-desc">How anxious do you feel?</p>
+                <div class="rating-scale">
+                    {% for i in range(1, 6) %}
+                    <label class="rating-option">
+                        <input type="radio" name="anxiety" value="{{ i }}" required>
+                        <span class="rating-circle">{{ i }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <div class="rating-labels">
+                    <span>Very Low</span>
+                    <span>Very High</span>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn-primary btn-large">View Results →</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

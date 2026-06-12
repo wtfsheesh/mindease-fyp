@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Chat Session - MindEase{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase - Chat Session</span>
+        </div>
+        <div class="nav-right">
+            <button onclick="endSessionConfirm()" class="btn-end-session">End Session</button>
+        </div>
+    </div>
+</nav>
+
+<div class="chat-container">
+    <div class="chat-sidebar">
+        <div class="session-info">
+            <div class="info-item">
+                <div class="info-label">Stress Level</div>
+                <div class="stress-indicator {% if stress_level >= 4 %}stress-high{% endif %}">{{ stress_level }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Session Time</div>
+                <div class="timer" id="sessionTimer">00:00</div>
+            </div>
+        </div>
+        
+        <div class="sidebar-actions">
+            <a href="{{ url_for('breathing') }}" class="sidebar-btn" target="_blank">
+                🫁 Breathing Exercise
+            </a>
+        </div>
+    </div>
+    
+    <div class="chat-main">
+        <div class="chat-messages" id="chatMessages">
+            {% for message in messages %}
+                {% if message.sender == 'bot' %}
+                <div class="message bot-message">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content">
+                        <p>{{ message.message_text }}</p>
+                    </div>
+                </div>
+                {% else %}
+                <div class="message user-message">
+                    <div class="message-content">
+                        <p>{{ message.message_text }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        
+        <div class="chat-input-area">
+            <form id="chatForm" onsubmit="event.preventDefault(); sendMessage();">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Type your message..." 
+                    class="chat-input"
+                    autocomplete="off"
+                >
+                <button type="submit" class="btn-send" id="sendBtn">Send →</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form id="endSessionForm" action="{{ url_for('end_session', session_id=session_id) }}" method="POST" style="display: none;">
+</form>
+
+<script>
+// Store session ID for AJAX calls
+const SESSION_ID = {{ session_id }};
+
+// Start session timer
+let seconds = 0;
+setInterval(() => {
+    seconds++;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    document.getElementById('sessionTimer').textContent = 
+        String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+}, 1000);
+
+// Send message function
+async function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    const sendBtn = document.getElementById('sendBtn');
+    
+    if (!message) return;
+    
+    // Disable input while sending
+    input.disabled = true;
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
+    
+    // Add user message to chat immediately
+    const chatMessages = document.getElementById('chatMessages');
+    const userMsg = document.createElement('div');
+    userMsg.className = 'message user-message';
+    userMsg.innerHTML = `
+        <div class="message-content">
+            <p>${escapeHtml(message)}</p>
+        </div>
+    `;
+    chatMessages.appendChild(userMsg);
+    input.value = '';
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    try {
+        // Send to server via AJAX
+        const response = await fetch('/api/send-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                session_id: SESSION_ID
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Add bot response
+            const botMsg = document.createElement('div');
+            botMsg.className = 'message bot-message';
+            botMsg.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <p>${escapeHtml(data.bot_message)}</p>
+                </div>
+            `;
+            chatMessages.appendChild(botMsg);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else {
+            alert('Error sending message. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Network error. Please check your connection.');
+    }
+    
+    // Re-enable input
+    input.disabled = false;
+    sendBtn.disabled = false;
+    sendBtn.textContent = 'Send →';
+    input.focus();
+}
+
+// End session confirmation
+function endSessionConfirm() {
+    if (confirm('Are you sure you want to end this session? You will be asked to complete a post-session assessment.')) {
+        document.getElementById('endSessionForm').submit();
+    }
+}
+
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Allow Enter key to send
+document.getElementById('messageInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+</script>
+{% endblock %}

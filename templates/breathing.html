@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Breathing Exercises - MindEase{% endblock %}
+
+{% block extra_css %}
+<style>
+.breathing-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 30px;
+}
+.technique-list {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.technique-item {
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.technique-item:hover {
+    background: var(--bg-gray);
+}
+.technique-item.active {
+    background: var(--primary-blue);
+    color: white;
+}
+.technique-name {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.technique-pattern {
+    font-size: 13px;
+    opacity: 0.8;
+}
+.technique-content {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.breathing-diagram {
+    width: 300px;
+    height: 300px;
+    margin: 30px auto;
+    position: relative;
+    border: 3px dashed var(--primary-blue);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.diagram-center {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+.diagram-label {
+    position: absolute;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+.diagram-label.top {
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.diagram-label.right {
+    right: -80px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.diagram-label.bottom {
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+.diagram-label.left {
+    left: -80px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.instruction-list {
+    margin: 30px 0;
+}
+.instruction-list li {
+    padding: 12px 0;
+    border-left: 4px solid var(--primary-blue);
+    padding-left: 16px;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .breathing-container {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('dashboard') }}" class="btn-back">← Back</a>
+        </div>
+    </div>
+</nav>
+
+<div class="breathing-container">
+    <div class="technique-list">
+        <h3 style="margin-bottom: 20px;">Select Technique</h3>
+        
+        <div class="technique-item active" data-technique="box">
+            <div class="technique-name">Box Breathing</div>
+            <div class="technique-pattern">4-4-4-4 pattern</div>
+        </div>
+        
+        <div class="technique-item" data-technique="deep">
+            <div class="technique-name">Deep Breathing</div>
+            <div class="technique-pattern">Slow inhale & exhale</div>
+        </div>
+        
+        <div class="technique-item" data-technique="478">
+            <div class="technique-name">4-7-8 Breathing</div>
+            <div class="technique-pattern">Relaxation technique</div>
+        </div>
+    </div>
+    
+    <div class="technique-content" id="techniqueContent">
+        <!-- Content loaded by JavaScript -->
+    </div>
+</div>
+
+<script>
+const techniques = {
+    box: {
+        name: 'Box Breathing',
+        description: 'Also known as square breathing, this technique helps calm your nervous system and reduce stress.',
+        diagram: `
+            <div class="breathing-diagram">
+                <div class="diagram-label top">Inhale 4s</div>
+                <div class="diagram-label right">Hold 4s</div>
+                <div class="diagram-label bottom">Exhale 4s</div>
+                <div class="diagram-label left">Hold 4s</div>
+                <div class="diagram-center">
+                    Breathe<br>
+                    <span style="font-size: 16px; font-weight: normal;">in rhythm</span>
+                </div>
+            </div>
+        `,
+        instructions: [
+            'Breathe in through your nose for 4 seconds',
+            'Hold your breath for 4 seconds',
+            'Breathe out slowly through your mouth for 4 seconds',
+            'Hold your breath for 4 seconds',
+            'Repeat for 4-5 cycles'
+        ]
+    },
+    deep: {
+        name: 'Deep Breathing',
+        description: 'Simple and effective technique focusing on slow, deep breaths to activate the relaxation response.',
+        diagram: `
+            <div class="breathing-diagram">
+                <div class="diagram-center">
+                    Deep<br>Breaths
+                </div>
+            </div>
+        `,
+        instructions: [
+            'Sit or lie down in a comfortable position',
+            'Place one hand on your chest and one on your belly',
+            'Breathe in slowly through your nose for 5 seconds',
+            'Feel your belly rise while your chest remains relatively still',
+            'Breathe out slowly through your mouth for 7 seconds',
+            'Repeat for 5-10 minutes'
+        ]
+    },
+    '478': {
+        name: '4-7-8 Breathing',
+        description: 'A powerful relaxation technique that can help you fall asleep faster and reduce anxiety.',
+        diagram: `
+            <div class="breathing-diagram">
+                <div class="diagram-label top">Inhale 4s</div>
+                <div class="diagram-label right">Hold 7s</div>
+                <div class="diagram-label bottom">Exhale 8s</div>
+                <div class="diagram-center">
+                    4-7-8<br>
+                    <span style="font-size: 16px; font-weight: normal;">technique</span>
+                </div>
+            </div>
+        `,
+        instructions: [
+            'Exhale completely through your mouth making a whoosh sound',
+            'Close your mouth and inhale quietly through your nose for 4 counts',
+            'Hold your breath for 7 counts',
+            'Exhale completely through your mouth for 8 counts making a whoosh sound',
+            'Repeat the cycle 3-4 times'
+        ]
+    }
+};
+
+function loadTechnique(techniqueName) {
+    const technique = techniques[techniqueName];
+    const content = document.getElementById('techniqueContent');
+    
+    const instructionsList = technique.instructions.map((inst, i) => 
+        `<li>${inst}</li>`
+    ).join('');
+    
+    content.innerHTML = `
+        <h2 style="margin-bottom: 10px;">${technique.name}</h2>
+        <p style="color: var(--text-light); margin-bottom: 30px;">
+            ${technique.description}
+        </p>
+        
+        ${technique.diagram}
+        
+        <h3 style="margin-bottom: 16px;">Instructions:</h3>
+        <ol class="instruction-list">
+            ${instructionsList}
+        </ol>
+        
+        <div style="display: flex; gap: 16px; margin-top: 30px;">
+            <button class="btn-primary" style="flex: 1;" onclick="startPractice('${techniqueName}')">Start Practice Session</button>
+            <button class="btn-secondary" onclick="markComplete('${techniqueName}')" style="flex: 1; padding: 14px; border: 2px solid var(--primary-blue); background: white; color: var(--primary-blue); border-radius: 4px; cursor: pointer;">
+                ✓ Mark as Complete
+            </button>
+        </div>
+    `;
+}
+
+// Load box breathing by default
+loadTechnique('box');
+
+// Handle technique selection
+document.querySelectorAll('.technique-item').forEach(item => {
+    item.addEventListener('click', function() {
+        document.querySelectorAll('.technique-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        loadTechnique(this.dataset.technique);
+    });
+});
+
+async function markComplete(technique) {
+    try {
+        const response = await fetch('/api/complete-breathing', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ technique: technique })
+        });
+        
+        if (response.ok) {
+            alert('✓ Exercise completed! Keep up the great work.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function startPractice(technique) {
+    alert('Practice mode would guide you through the breathing exercise with visual cues and timing. This feature will be enhanced in future updates!');
+}
+</script>
+{% endblock %}

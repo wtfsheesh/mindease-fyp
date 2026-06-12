@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - MindEase{% endblock %}
+
+{% block content %}
+<div class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div style="text-align: center; max-width: 500px;">
+        <div style="font-size: 120px; margin-bottom: 20px;">🔍</div>
+        <h1 style="font-size: 48px; margin-bottom: 16px; color: var(--text-dark);">404</h1>
+        <h2 style="font-size: 24px; margin-bottom: 16px; color: var(--text-light);">Page Not Found</h2>
+        <p style="color: var(--text-light); margin-bottom: 30px;">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+        <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('index') }}" 
+           class="btn-primary" 
+           style="display: inline-block; padding: 14px 28px; text-decoration: none;">
+            {% if current_user.is_authenticated %}
+                Go to Dashboard
+            {% else %}
+                Go to Home
+            {% endif %}
+        </a>
+    </div>
+</div>
+{% endblock %}

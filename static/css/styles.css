@@ -1,0 +1,210 @@
+/* ============================================================================
+   MINDEASE CORE STYLESHEET - SYSTEM LAYOUT & UI COMPONENTS
+   ============================================================================ */
+
+:root {
+    --primary-color: #4A90E2;
+    --primary-hover: #357ABD;
+    --bg-color: #f4f7f6;
+    --card-bg: #ffffff;
+    --text-main: #333333;
+    --text-muted: #666666;
+    --border-color: #dddddd;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    padding: 0;
+}
+
+/* Auth Pages Container Structure */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* High-Fidelity Form Cards */
+.login-card {
+    background: var(--card-bg);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    max-width: 440px;
+    box-sizing: border-box;
+}
+
+/* Header & Icon Positioning */
+.logo {
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.logo-icon {
+    font-size: 2.5rem;
+    margin-bottom: 5px;
+}
+
+.logo h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: var(--text-main);
+}
+
+.tagline {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    margin-top: 0;
+    margin-bottom: 25px;
+}
+
+/* Form Layout Inputs */
+.form-group {
+    margin-bottom: 18px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    color: #555555;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+input[type="text"], input[type="email"], input[type="password"], select {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-sizing: border-box;
+    font-size: 0.95rem;
+    background-color: #ffffff;
+    color: var(--text-main);
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+}
+
+/* Actions & Navigation Links */
+.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary-color);
+    border: none;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+}
+
+.register-link {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.register-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.register-link a:hover {
+    text-decoration: underline;
+}
+
+/* Password Strength Indicator UI Elements */
+.password-strength {
+    background-color: #eeeeee;
+    border-radius: 3px;
+    height: 6px;
+    margin-top: 8px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.strength-bar {
+    background-color: #F44336;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+small {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+}
+
+/* ============================================================================
+   ORIGINAL COMPONENT BLOCK COPIED BELOW
+   ============================================================================ */
+
+/* Flash Messages */
+.flash-message {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.flash-success {
+    background: #E8F5E9;
+    color: #2E7D32;
+    border-left: 4px solid #4CAF50;
+}
+
+.flash-error {
+    background: #FFEBEE;
+    color: #C62828;
+    border-left: 4px solid #F44336;
+}
+
+.flash-warning {
+    background: #FFF3E0;
+    color: #E65100;
+    border-left: 4px solid #FF9800;
+}
+
+.flash-info {
+    background: #E3F2FD;
+    color: #1565C0;
+    border-left: 4px solid #2196F3;
+}
+
+/* Loading spinner */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

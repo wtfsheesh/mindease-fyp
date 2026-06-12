@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Journal Entry - MindEase{% endblock %}
+
+{% block extra_css %}
+<style>
+.journal-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+.journal-card {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+textarea {
+    width: 100%;
+    min-height: 300px;
+    padding: 16px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+}
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+}
+.mood-selector {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.mood-option {
+    padding: 10px 20px;
+    border: 2px solid var(--border-gray);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.mood-option:hover {
+    border-color: var(--primary-blue);
+}
+.mood-option.selected {
+    background: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+}
+.btn-secondary {
+    padding: 14px 28px;
+    background: white;
+    color: var(--primary-blue);
+    border: 2px solid var(--primary-blue);
+    border-radius: 4px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+.btn-secondary:hover {
+    background: var(--primary-blue);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('dashboard') }}" class="btn-back">← Back</a>
+        </div>
+    </div>
+</nav>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div style="max-width: 800px; margin: 20px auto; padding: 0 20px;">
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}
+
+<div class="journal-container">
+    <div class="journal-card">
+        <h2 style="margin-bottom: 30px;">New Journal Entry</h2>
+        
+        <form action="{{ url_for('journal') }}" method="POST">
+            <div class="form-group">
+                <label for="title">Entry Title</label>
+                <input type="text" id="title" name="title" placeholder="Give your entry a title..." required>
+            </div>
+            
+            <div class="form-group">
+                <label for="content">Your Thoughts</label>
+                <textarea id="content" name="content" placeholder="Write about your feelings, experiences, or anything on your mind..." required></textarea>
+                <small id="charCount">0 / 5000 characters</small>
+            </div>
+            
+            <div class="form-group">
+                <label>How are you feeling?</label>
+                <div class="mood-selector">
+                    <div class="mood-option" data-mood="Happy">😊 Happy</div>
+                    <div class="mood-option selected" data-mood="Calm">😌 Calm</div>
+                    <div class="mood-option" data-mood="Stressed">😰 Stressed</div>
+                    <div class="mood-option" data-mood="Sad">😢 Sad</div>
+                    <div class="mood-option" data-mood="Anxious">😫 Anxious</div>
+                    <div class="mood-option" data-mood="Neutral">😐 Neutral</div>
+                </div>
+                <input type="hidden" id="mood" name="mood" value="Calm">
+            </div>
+            
+            <div style="display: flex; gap: 16px; margin-top: 30px;">
+                <button type="submit" class="btn-primary" style="flex: 1;">Save Entry</button>
+                <a href="{{ url_for('dashboard') }}" class="btn-secondary" style="flex: 1; text-align: center; line-height: 50px; text-decoration: none; display: block;">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Character counter
+document.getElementById('content').addEventListener('input', function() {
+    const count = this.value.length;
+    document.getElementById('charCount').textContent = count + ' / 5000 characters';
+    
+    if (count > 5000) {
+        this.value = this.value.substring(0, 5000);
+        document.getElementById('charCount').textContent = '5000 / 5000 characters';
+    }
+});
+
+// Mood selector
+document.querySelectorAll('.mood-option').forEach(option => {
+    option.addEventListener('click', function() {
+        document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+        this.classList.add('selected');
+        document.getElementById('mood').value = this.dataset.mood;
+    });
+});
+</script>
+{% endblock %}
