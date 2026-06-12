@@ -10,16 +10,27 @@ class GeminiChatbot:
         # Cleans up and stores your exact API key string
         self.api_key = (api_key or os.getenv('GEMINI_API_KEY') or "REDACTED").strip()
         
-        # Using the standard v1 Beta endpoint which has the widest model accessibility layout
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.api_key}"
+        # gemini-2.0-flash is the current free-tier model (1.5-flash is deprecated)
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.api_key}"
 
     def detect_crisis_keywords(self, user_message):
-        crisis_keywords = ['suicide', 'kill myself', 'end it all', 'want to die', 'self harm', 'hurt myself']
+        crisis_keywords = [
+            'suicide', 'kill myself', 'end it all', 'want to die',
+            'self harm', 'hurt myself', 'end my life', 'no reason to live',
+            'rather be dead', 'better off dead', 'cant go on'
+        ]
         message_lower = user_message.lower()
         return any(keyword in message_lower for keyword in crisis_keywords)
-    
+
     def get_crisis_response(self):
-        return "I'm concerned about what you're sharing. Please reach out to Befrienders Malaysia: 03-7956-8145 for immediate support."
+        return (
+            "I'm really concerned about what you're sharing with me. "
+            "Please reach out for immediate support:\n\n"
+            "🆘 Befrienders Malaysia: 03-7956-8145 (24/7)\n"
+            "🚨 Emergency: 999\n"
+            "🏫 MMU Counseling Centre: 03-8312-5798\n\n"
+            "You are not alone, and help is available right now. Please reach out to them."
+        )
 
     def generate_response(self, user_message, stress_level, conversation_history=None):
         if self.detect_crisis_keywords(user_message):
@@ -84,7 +95,24 @@ class GeminiChatbot:
             return "I am right here listening to you. Tell me a bit more about what's on your mind."
 
     def get_conversation_starter(self, stress_level):
-        return f"Hi there! I see you're at a stress level of {stress_level} out of 5. I'm here to listen and support you. What's on your mind today?"
+        if stress_level >= 4:
+            return (
+                "Hi, I'm really glad you're here. 💙 It sounds like things have been quite tough lately — "
+                "a stress level of " + str(stress_level) + " out of 5 tells me you're carrying a lot right now. "
+                "I'm here to listen without judgment. Take a breath, and whenever you're ready, tell me what's been going on."
+            )
+        elif stress_level == 3:
+            return (
+                "Hey, welcome! 😊 I can see you're feeling moderately stressed today (level " + str(stress_level) + "/5). "
+                "That's completely okay — life gets overwhelming sometimes. "
+                "I'm here to chat and support you. What's been on your mind lately?"
+            )
+        else:
+            return (
+                "Hello! Great to see you today. 🌟 You're starting at a stress level of " + str(stress_level) + "/5, "
+                "which sounds manageable. I'm here to help you maintain that positive momentum. "
+                "What would you like to talk about or work on today?"
+            )
 
 def create_chatbot():
     return GeminiChatbot()
