@@ -337,13 +337,21 @@ def calculate_effectiveness(session_id):
     
     pre = session.pre_survey
     post = session.post_survey
-    
-    # Calculate total scores
-    pre_total = pre.get_total_score()
-    post_total = post.get_total_score()
-    
-    # Calculate overall improvement percentage
-    # Formula from FYP report: (pre - post) / pre * 100
+
+    # Calculate direction-aware distress scores (lower = better).
+    # Stress and anxiety are already "lower is better"; mood, sleep and
+    # energy are "higher is better" so they are inverted (6 - value).
+    # Without this, an improvement in mood/sleep/energy would cancel out
+    # a reduction in stress/anxiety and report NO CHANGE for a good session.
+    def distress_score(survey):
+        return (survey.stress_level + survey.anxiety_level +
+                (6 - survey.mood) + (6 - survey.sleep_quality) +
+                (6 - survey.energy_level))
+
+    pre_total = distress_score(pre)
+    post_total = distress_score(post)
+
+    # Overall improvement percentage: (pre - post) / pre * 100
     if pre_total > 0:
         overall_improvement = ((pre_total - post_total) / pre_total) * 100
     else:
