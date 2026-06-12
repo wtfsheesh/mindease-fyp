@@ -1,0 +1,131 @@
+# test_flow.py
+# End-to-end flow test for MindEase using Flask test client
+# Tests: register -> login -> dashboard -> pre-assessment -> chat ->
+#        send message -> end session -> post-assessment -> comparison ->
+#        history -> breathing -> journal -> logout
+
+import sys
+sys.stdout.reconfigure(encoding="utf-8")
+
+from app import app, db
+from models import User
+
+EMAIL = "testflow@mmu.edu.my"
+PASSWORD = "testpass123"
+
+results = []
+
+def check(name, ok, detail=""):
+    results.append((name, ok, detail))
+    print(f"{'PASS' if ok else 'FAIL'} - {name}" + (f" ({detail})" if detail else ""))
+
+with app.app_context():
+    # Clean slate for the test user
+    existing = User.query.filter_by(email=EMAIL).first()
+    if existing:
+        db.session.delete(existing)
+        db.session.commit()
+
+client = app.test_client()
+
+# 1. Index page loads
+r = client.get("/")
+check("Index page", r.status_code == 200)
+
+# 2. Register
+r = client.post("/register", data={
+    "email": EMAIL, "password": PASSWORD, "confirmPassword": PASSWORD,
+    "fullname": "Test Flow", "ageGroup": "18-24"
+}, follow_redirects=True)
+check("Register", r.status_code == 200 and b"Registration successful" in r.data)
+
+# 3. Login
+r = client.post("/login", data={"email": EMAIL, "password": PASSWORD}, follow_redirects=True)
+check("Login", r.status_code == 200 and b"Welcome back" in r.data)
+
+# 4. Dashboard
+r = client.get("/dashboard")
+check("Dashboard", r.status_code == 200)
+
+# 5. Pre-assessment GET + POST
+r = client.get("/pre-assessment")
+check("Pre-assessment page", r.status_code == 200)
+r = client.post("/pre-assessment", data={
+    "stress": 4, "mood": 2, "sleep": 2, "energy": 2, "anxiety": 4
+}, follow_redirects=False)
+check("Pre-assessment submit", r.status_code == 302 and "/chat" in r.headers.get("Location", ""))
+
+# 6. Chat page (generates starter message)
+r = client.get("/chat")
+check("Chat page", r.status_code == 200)
+
+# Get session id from the page
+import re
+m = re.search(rb"const SESSION_ID = (\d+)", r.data)
+session_id = int(m.group(1)) if m else None
+check("Session ID embedded in chat page", session_id is not None, f"id={session_id}")
+
+# 7. Send a message (AJAX) - bot may use fallback if API rate-limited
+r = client.post("/api/send-message", json={"message": "I'm stressed about my exams", "session_id": session_id})
+data = r.get_json()
+check("Send message API", r.status_code == 200 and data.get("success") and len(data.get("bot_message", "")) > 0,
+      f"bot said: {data.get('bot_message', '')[:60]}...")
+
+# 8. Crisis detection (hardcoded, never goes to Gemini)
+r = client.post("/api/send-message", json={"message": "I want to end it all", "session_id": session_id})
+data = r.get_json()
+check("Crisis detection", "Befrienders" in data.get("bot_message", ""))
+
+# 9. End session
+r = client.post(f"/end-session/{session_id}", follow_redirects=False)
+check("End session", r.status_code == 302 and "post-assessment" in r.headers.get("Location", ""))
+
+# 10. Post-assessment
+r = client.post("/post-assessment", data={
+    "stress": 2, "mood": 4, "sleep": 3, "energy": 3, "anxiety": 2
+}, follow_redirects=False)
+check("Post-assessment submit", r.status_code == 302 and f"/comparison/{session_id}" in r.headers.get("Location", ""))
+
+# 11. Comparison page with effectiveness
+r = client.get(f"/comparison/{session_id}")
+check("Comparison page", r.status_code == 200)
+
+# Verify effectiveness math: pre total = 4+2+2+2+4 = 14, post = 2+4+3+3+2 = 14
+from models import calculate_effectiveness
+with app.app_context():
+    eff = calculate_effectiveness(session_id)
+check("Effectiveness calculated", eff is not None,
+      f"pre={eff['pre_total']} post={eff['post_total']} improvement={eff['overall_improvement']}% status={eff['effectiveness_status']}")
+
+# 12. History
+r = client.get("/history")
+check("History page", r.status_code == 200)
+
+# 13. Breathing page + completion API
+r = client.get("/breathing")
+check("Breathing page", r.status_code == 200)
+r = client.post("/api/complete-breathing", json={"technique": "Box"})
+check("Complete breathing API", r.status_code == 200 and r.get_json().get("success"))
+
+# 14. Journal GET + POST
+r = client.get("/journal")
+check("Journal page", r.status_code == 200)
+r = client.post("/journal", data={"title": "Test Entry", "content": "Feeling better after the session.", "mood": "Calm"}, follow_redirects=False)
+check("Journal submit", r.status_code == 302)
+
+# 15. Logout
+r = client.get("/logout", follow_redirects=True)
+check("Logout", r.status_code == 200)
+
+# 16. Protected route redirects when logged out
+r = client.get("/dashboard", follow_redirects=False)
+check("Auth protection after logout", r.status_code == 302)
+
+# 17. 404 handler
+r = client.get("/nonexistent-page")
+check("404 handler", r.status_code == 404)
+
+print()
+passed = sum(1 for _, ok, _ in results if ok)
+print(f"=== {passed}/{len(results)} checks passed ===")
+sys.exit(0 if passed == len(results) else 1)

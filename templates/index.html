@@ -66,14 +66,16 @@
             background: #357ABD;
         }
         .flash-messages {
-            background: #fee2e2;
-            color: #ef4444;
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 20px;
             font-size: 0.9rem;
             text-align: center;
         }
+        .flash-messages.flash-error { background: #fee2e2; color: #ef4444; }
+        .flash-messages.flash-success { background: #dcfce7; color: #16a34a; }
+        .flash-messages.flash-info { background: #e3f2fd; color: #1565c0; }
+        .flash-messages.flash-warning { background: #fff3e0; color: #e65100; }
         .register-link {
             text-align: center;
             margin-top: 20px;
@@ -92,13 +94,13 @@
     <h2>MindEase</h2>
     <p class="subtitle">Adaptive Stress Management Chatbot Portal</p>
 
-    {% with messages = get_flashed_messages(category_filter=["error"]) %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash-messages">
-          {% for message in messages %}
-            {{ message }}
-          {% endfor %}
+        {% for category, message in messages %}
+        <div class="flash-messages flash-{{ category }}">
+          {{ message }}
         </div>
+        {% endfor %}
       {% endif %}
     {% endwith %}
 
