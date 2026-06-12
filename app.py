@@ -215,17 +215,26 @@ def dashboard():
     # Get user statistics
     total_sessions = ChatSession.query.filter_by(user_id=current_user.id).count()
     
-    # Calculate average stress reduction
+    # Calculate average stress reduction and build trend data over time
+    # (stress trends dashboard: 80% of FYP1 survey respondents wanted this)
     completed_sessions = ChatSession.query.filter_by(user_id=current_user.id).filter(
         ChatSession.end_time.isnot(None)
-    ).all()
-    
+    ).order_by(ChatSession.start_time).all()
+
     stress_reductions = []
+    trend_data = []
     for session in completed_sessions:
         effectiveness = calculate_effectiveness(session.id)
-        if effectiveness and effectiveness['overall_improvement'] > 0:
-            stress_reductions.append(effectiveness['overall_improvement'])
-    
+        if effectiveness:
+            trend_data.append({
+                'date': session.start_time.strftime('%d %b'),
+                'improvement': effectiveness['overall_improvement'],
+                'pre': effectiveness['pre_total'],
+                'post': effectiveness['post_total']
+            })
+            if effectiveness['overall_improvement'] > 0:
+                stress_reductions.append(effectiveness['overall_improvement'])
+
     avg_stress_reduction = round(sum(stress_reductions) / len(stress_reductions)) if stress_reductions else 0
     
     # Get total journal entries
@@ -248,7 +257,8 @@ def dashboard():
                          total_sessions=total_sessions,
                          avg_stress_reduction=avg_stress_reduction,
                          total_journals=total_journals,
-                         daily_quote=daily_quote)
+                         daily_quote=daily_quote,
+                         trend_data=trend_data)
 
 # Pre-session assesment
 @app.route('/pre-assessment', methods=['GET', 'POST'])
@@ -560,14 +570,20 @@ def comparison(session_id):
     
     
     effectiveness = calculate_effectiveness(session_id)
-    
+
     if not effectiveness:
         flash('Cannot calculate effectiveness. Assessment data missing.', 'error')
         return redirect(url_for('dashboard'))
-    
+
+    # Full conversation transcript (IT-03: session details show transcript)
+    messages = ChatMessage.query.filter_by(session_id=session_id).order_by(
+        ChatMessage.timestamp
+    ).all()
+
     return render_template('comparison.html',
                          session=chat_session,
-                         effectiveness=effectiveness)
+                         effectiveness=effectiveness,
+                         messages=messages)
 
 # Session History
 

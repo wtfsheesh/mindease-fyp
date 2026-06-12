@@ -59,6 +59,16 @@
             </div>
         </div>
         
+        {% if trend_data and trend_data|length >= 2 %}
+        <div class="welcome-card" style="padding: 25px 30px;">
+            <h3 style="margin: 0 0 4px 0;">📈 Your Stress Trend</h3>
+            <p style="margin: 0 0 16px 0; color: var(--text-light); font-size: 0.9rem;">
+                Session improvement over time — higher is better
+            </p>
+            <canvas id="trendChart" height="90"></canvas>
+        </div>
+        {% endif %}
+
         {% if daily_quote %}
         <div class="quote-card">
             <div class="quote-icon">💬</div>
@@ -100,4 +110,49 @@
         </div>
     </div>
 </div>
+
+{% if trend_data and trend_data|length >= 2 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const trendData = {{ trend_data | tojson }};
+
+new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+        labels: trendData.map(d => d.date),
+        datasets: [{
+            label: 'Improvement %',
+            data: trendData.map(d => d.improvement),
+            borderColor: '#4A90E2',
+            backgroundColor: 'rgba(74, 144, 226, 0.12)',
+            fill: true,
+            tension: 0.35,
+            pointBackgroundColor: trendData.map(d => d.improvement > 0 ? '#22c55e' : '#ef4444'),
+            pointRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => {
+                        const d = trendData[ctx.dataIndex];
+                        return ` ${d.improvement}% improvement (score ${d.pre} → ${d.post})`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                title: { display: true, text: 'Improvement %' },
+                grid: { color: '#f0f0f0' }
+            },
+            x: { grid: { display: false } }
+        }
+    }
+});
+</script>
+{% endif %}
 {% endblock %}

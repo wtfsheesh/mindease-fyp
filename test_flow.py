@@ -86,9 +86,10 @@ r = client.post("/post-assessment", data={
 }, follow_redirects=False)
 check("Post-assessment submit", r.status_code == 302 and f"/comparison/{session_id}" in r.headers.get("Location", ""))
 
-# 11. Comparison page with effectiveness
+# 11. Comparison page with effectiveness + conversation transcript (IT-03)
 r = client.get(f"/comparison/{session_id}")
 check("Comparison page", r.status_code == 200)
+check("Transcript on comparison page", b"Conversation Transcript" in r.data)
 
 # Verify effectiveness math: pre total = 4+2+2+2+4 = 14, post = 2+4+3+3+2 = 14
 from models import calculate_effectiveness
@@ -145,6 +146,34 @@ check("Auth protection after logout", r.status_code == 302)
 # 17. 404 handler
 r = client.get("/nonexistent-page")
 check("404 handler", r.status_code == 404)
+
+# 18. Admin module (FYP1 test cases UT-05, IT-04)
+admin_client = app.test_client()
+r = admin_client.get("/admin", follow_redirects=False)
+check("Admin guard blocks anonymous", r.status_code == 302)
+
+r = admin_client.post("/admin/login", data={"username": "admin", "password": "wrong"}, follow_redirects=True)
+check("Admin wrong password rejected", b"Invalid admin credentials" in r.data)
+
+r = admin_client.post("/admin/login", data={"username": "admin", "password": "AdminPass456"}, follow_redirects=True)
+check("Admin login (UT-05)", b"System Overview" in r.data)
+
+r = admin_client.post("/admin/quotes", data={"quote_text": "Testing quote", "author": "Test Author"}, follow_redirects=True)
+check("Admin add quote (IT-04)", b"Quote added successfully" in r.data)
+
+from models import DailyMotivation
+with app.app_context():
+    q = DailyMotivation.query.filter_by(author="Test Author").first()
+    qid = q.id
+r = admin_client.post(f"/admin/quotes/toggle/{qid}", follow_redirects=True)
+with app.app_context():
+    toggled = DailyMotivation.query.get(qid).is_active == False
+check("Admin toggle quote", toggled)
+
+r = admin_client.post(f"/admin/quotes/delete/{qid}", follow_redirects=True)
+with app.app_context():
+    deleted = DailyMotivation.query.get(qid) is None
+check("Admin delete quote", deleted)
 
 print()
 passed = sum(1 for _, ok, _ in results if ok)

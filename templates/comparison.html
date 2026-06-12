@@ -241,6 +241,43 @@
         </p>
     </div>
     
+    {% if messages %}
+    <div class="comparison-table" style="margin-top: 25px;">
+        <h3 style="margin-bottom: 6px;">Conversation Transcript</h3>
+        <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 16px;">
+            {{ messages|length }} messages from this session
+        </p>
+        <button type="button" class="btn-secondary" id="transcriptToggle"
+                onclick="toggleTranscript()" style="padding: 10px 22px; cursor: pointer;">
+            Show Transcript ▾
+        </button>
+        <div id="transcriptBox" style="display: none; margin-top: 20px; max-height: 420px; overflow-y: auto; flex-direction: column; gap: 14px;">
+            {% for message in messages %}
+                {% if message.sender == 'bot' %}
+                <div class="message bot-message" style="max-width: 85%;">
+                    <div class="message-avatar">🤖</div>
+                    <div class="message-content"><p>{{ message.message_text }}</p></div>
+                </div>
+                {% else %}
+                <div class="message user-message" style="max-width: 85%;">
+                    <div class="message-content"><p>{{ message.message_text }}</p></div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+    function toggleTranscript() {
+        const box = document.getElementById('transcriptBox');
+        const btn = document.getElementById('transcriptToggle');
+        const open = box.style.display !== 'none';
+        box.style.display = open ? 'none' : 'flex';
+        btn.textContent = open ? 'Show Transcript ▾' : 'Hide Transcript ▴';
+    }
+    </script>
+    {% endif %}
+
     <div class="action-buttons">
         <a href="{{ url_for('history') }}" class="btn-secondary">
             View Session History
