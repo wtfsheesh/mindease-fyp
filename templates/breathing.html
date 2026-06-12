@@ -104,6 +104,54 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Guided practice mode */
+.practice-area {
+    text-align: center;
+    padding: 20px 0;
+}
+.breath-circle-wrap {
+    width: 280px;
+    height: 280px;
+    margin: 20px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.breath-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #7FB3F0, var(--primary-blue, #4A90E2));
+    box-shadow: 0 0 40px rgba(74, 144, 226, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    transform: scale(1);
+    /* transition duration is set from JS to match each phase */
+    transition: transform 4s ease-in-out;
+}
+.phase-label {
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--primary-blue, #4A90E2);
+    margin-bottom: 4px;
+    min-height: 34px;
+}
+.cycle-label {
+    color: #888;
+    font-size: 15px;
+    margin-bottom: 10px;
+}
+.practice-done {
+    font-size: 22px;
+    font-weight: 600;
+    color: #16a34a;
+    padding: 30px 0;
+}
 </style>
 {% endblock %}
 
@@ -273,8 +321,92 @@ async function markComplete(technique) {
     }
 }
 
+// ---------------------------------------------------------------
+// Guided practice mode: animated circle that grows on inhale,
+// pauses on hold and shrinks on exhale, with countdown + cycles.
+// ---------------------------------------------------------------
+
+// Phase plan per technique: [label, seconds, circle scale target]
+const practicePlans = {
+    box:  { cycles: 4, phases: [['Inhale', 4, 2.0], ['Hold', 4, 2.0], ['Exhale', 4, 1.0], ['Hold', 4, 1.0]] },
+    deep: { cycles: 5, phases: [['Inhale', 5, 2.0], ['Exhale', 7, 1.0]] },
+    '478':{ cycles: 4, phases: [['Inhale', 4, 2.0], ['Hold', 7, 2.0], ['Exhale', 8, 1.0]] }
+};
+
+let practiceTimers = [];
+
+function stopPractice(technique) {
+    practiceTimers.forEach(t => clearTimeout(t));
+    practiceTimers = [];
+    loadTechnique(technique); // back to the normal technique view
+}
+
 function startPractice(technique) {
-    alert('Practice mode would guide you through the breathing exercise with visual cues and timing. This feature will be enhanced in future updates!');
+    const plan = practicePlans[technique];
+    const content = document.getElementById('techniqueContent');
+    const totalCycles = plan.cycles;
+
+    content.innerHTML = `
+        <div class="practice-area">
+            <h2 style="margin-bottom: 6px;">${techniques[technique].name}</h2>
+            <div class="cycle-label" id="cycleLabel">Get ready...</div>
+            <div class="phase-label" id="phaseLabel">&nbsp;</div>
+            <div class="breath-circle-wrap">
+                <div class="breath-circle" id="breathCircle">&nbsp;</div>
+            </div>
+            <button class="btn-secondary" onclick="stopPractice('${technique}')"
+                style="padding: 12px 28px; border: 2px solid var(--primary-blue); background: white; color: var(--primary-blue); border-radius: 4px; cursor: pointer;">
+                Stop
+            </button>
+        </div>
+    `;
+
+    const circle = document.getElementById('breathCircle');
+    const phaseLabel = document.getElementById('phaseLabel');
+    const cycleLabel = document.getElementById('cycleLabel');
+
+    // Build a flat timeline of all phases across all cycles
+    const timeline = [];
+    for (let c = 1; c <= totalCycles; c++) {
+        plan.phases.forEach(([label, secs, scale]) => timeline.push({ label, secs, scale, cycle: c }));
+    }
+
+    let elapsed = 600; // small lead-in before the first phase
+    timeline.forEach(step => {
+        practiceTimers.push(setTimeout(() => {
+            cycleLabel.textContent = `Cycle ${step.cycle} of ${totalCycles}`;
+            phaseLabel.textContent = step.label;
+            // match the CSS transition to this phase's duration, then move the circle
+            circle.style.transition = `transform ${step.secs}s ease-in-out`;
+            circle.style.transform = `scale(${step.scale})`;
+            // per-second countdown inside the circle
+            for (let s = 0; s < step.secs; s++) {
+                practiceTimers.push(setTimeout(() => {
+                    circle.textContent = step.secs - s;
+                }, s * 1000));
+            }
+        }, elapsed));
+        elapsed += step.secs * 1000;
+    });
+
+    // Finish: log the completion automatically and show a done screen
+    practiceTimers.push(setTimeout(async () => {
+        phaseLabel.textContent = '';
+        cycleLabel.textContent = '';
+        circle.style.transition = 'transform 1s ease-in-out';
+        circle.style.transform = 'scale(1)';
+        circle.textContent = '✓';
+        content.querySelector('.practice-area').insertAdjacentHTML('beforeend',
+            `<div class="practice-done">Well done! Exercise complete 🌿</div>`);
+        try {
+            await fetch('/api/complete-breathing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ technique: technique })
+            });
+        } catch (e) { console.error(e); }
+        practiceTimers.push(setTimeout(() => loadTechnique(technique), 3500));
+    }, elapsed + 400));
 }
 </script>
 {% endblock %}
