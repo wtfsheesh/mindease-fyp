@@ -316,6 +316,41 @@ class DailyMotivation(db.Model):
 
 
 # ============================================================================
+# TABLE 10: ADMIN (Administrator authentication)
+# From FYP1 Report: Admin actor (Section 3.1.2), Use Cases 11-12
+# Separate from User authentication as specified in test case UT-05
+# ============================================================================
+
+class Admin(db.Model):
+    """
+    Admin model for administrator authentication
+    Independent from User auth - admins log in at /admin/login with username
+    """
+    __tablename__ = 'admin'
+
+    # Primary Key
+    id = db.Column(db.Integer, primary_key=True)
+
+    # Admin Credentials
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+
+    # Timestamp
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def set_password(self, password):
+        """Hash password using Werkzeug - same policy as User accounts"""
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        """Verify password against hash"""
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f'<Admin {self.username}>'
+
+
+# ============================================================================
 # HELPER FUNCTIONS FOR EFFECTIVENESS CALCULATION
 # From FYP Report: Calculate improvement percentages
 # ============================================================================

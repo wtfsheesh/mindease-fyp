@@ -1,6 +1,5 @@
 # app.py
 # Main Flask Application for MindEase
-# Implements all routes and functionality from FYP1 report
 # Uses Flask 3.0.0, Flask-SQLAlchemy 3.1.1, Flask-Login 0.6.3
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
@@ -15,7 +14,8 @@ import random
 load_dotenv()
 
 # Import database models
-from models import db, User, Profile, ChatSession, ChatMessage, PreSurvey, PostSurvey, JournalEntry, BreathingSession, DailyMotivation, calculate_effectiveness
+from models import db, User, Profile, ChatSession, ChatMessage, PreSurvey, PostSurvey, JournalEntry, BreathingSession, DailyMotivation, Admin, calculate_effectiveness
+from functools import wraps
 
 # Import Gemini chatbot
 from gemini_api import create_chatbot
@@ -52,6 +52,16 @@ login_manager.login_message = 'Please log in to access this page.'
 with app.app_context():
     db.create_all()
 
+    # Seed default admin account if none exists (Use Case 11 from FYP1)
+    # Credentials configurable via .env: ADMIN_USERNAME / ADMIN_PASSWORD
+    if Admin.query.count() == 0:
+        default_admin = Admin(username=os.getenv('ADMIN_USERNAME', 'admin'))
+        default_admin.set_password(os.getenv('ADMIN_PASSWORD', 'AdminPass456'))
+        db.session.add(default_admin)
+        db.session.commit()
+        print("Default admin account created (username: "
+              f"{default_admin.username})")
+
 # Initialize Gemini chatbot
 try:
     chatbot = create_chatbot()
@@ -79,9 +89,7 @@ def datetime_format(value, format='%b %d, %Y - %I:%M%p'):
         return ""
     return value.strftime(format)
 
-# ============================================================================
-# ROUTE 1: HOME / LOGIN PAGE
-# ============================================================================
+#Login Page 
 
 @app.route('/')
 def index():
@@ -129,9 +137,7 @@ def login():
     
     return render_template('index.html')
 
-# ============================================================================
-# ROUTE 2: REGISTRATION
-# ============================================================================
+# Registration
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -197,9 +203,7 @@ def register():
     
     return render_template('register.html')
 
-# ============================================================================
-# ROUTE 3: DASHBOARD
-# ============================================================================
+# Dashboard
 
 @app.route('/dashboard')
 @login_required
@@ -246,10 +250,7 @@ def dashboard():
                          total_journals=total_journals,
                          daily_quote=daily_quote)
 
-# ============================================================================
-# ROUTE 4: PRE-SESSION ASSESSMENT
-# ============================================================================
-
+# Pre-session assesment
 @app.route('/pre-assessment', methods=['GET', 'POST'])
 @login_required
 def pre_assessment():
@@ -451,9 +452,7 @@ def send_message():
         print(f"Send message error: {e}")
         return jsonify({'error': 'Server error'}), 500
 
-# ============================================================================
-# ROUTE 7: END SESSION
-# ============================================================================
+# To end session
 
 @app.route('/end-session/<int:session_id>', methods=['POST'])
 @login_required
@@ -477,9 +476,7 @@ def end_session(session_id):
     
     return redirect(url_for('post_assessment'))
 
-# ============================================================================
-# ROUTE 8: POST-SESSION ASSESSMENT
-# ============================================================================
+# Post-Session Assessemnt
 
 @app.route('/post-assessment', methods=['GET', 'POST'])
 @login_required
@@ -546,9 +543,7 @@ def post_assessment():
     
     return render_template('post-assessment.html')
 
-# ============================================================================
-# ROUTE 9: COMPARISON / RESULTS
-# ============================================================================
+# Comparison/Results
 
 @app.route('/comparison/<int:session_id>')
 @login_required
@@ -563,7 +558,7 @@ def comparison(session_id):
         flash('Invalid session.', 'error')
         return redirect(url_for('dashboard'))
     
-    # Calculate effectiveness
+    
     effectiveness = calculate_effectiveness(session_id)
     
     if not effectiveness:
@@ -574,9 +569,7 @@ def comparison(session_id):
                          session=chat_session,
                          effectiveness=effectiveness)
 
-# ============================================================================
-# ROUTE 10: SESSION HISTORY
-# ============================================================================
+# Session History
 
 @app.route('/history')
 @login_required
@@ -603,9 +596,7 @@ def history():
     
     return render_template('history.html', sessions=sessions_with_effectiveness)
 
-# ============================================================================
-# ROUTE 11: BREATHING EXERCISES
-# ============================================================================
+# Breathing Exercises
 
 @app.route('/breathing')
 @login_required
@@ -643,9 +634,7 @@ def complete_breathing():
         print(f"Complete breathing error: {e}")
         return jsonify({'error': 'Server error'}), 500
 
-# ============================================================================
-# ROUTE 12: JOURNAL
-# ============================================================================
+# Journaling Feature
 
 @app.route('/journal', methods=['GET', 'POST'])
 @login_required
@@ -769,6 +758,141 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+# ============================================================================
+# ADMIN MODULE (Use Cases 11-12 from FYP1: Admin Login, Quote Management)
+# Admin auth is separate from user auth (Flask session flag, not Flask-Login)
+# Privacy by design: admin sees aggregate statistics only - never user
+# conversations, journals or individual assessment answers.
+# ============================================================================
+
+def admin_required(f):
+    """Guard admin routes - redirects to admin login if not authenticated"""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get('admin_id'):
+            flash('Please log in as administrator.', 'warning')
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return wrapper
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """
+    Admin login - independent from user authentication (UT-05)
+    """
+    if session.get('admin_id'):
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+
+        admin = Admin.query.filter_by(username=username).first()
+
+        if admin and admin.check_password(password):
+            session['admin_id'] = admin.id
+            flash('Welcome, administrator!', 'success')
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid admin credentials.', 'error')
+
+    return render_template('admin-login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """End the admin session"""
+    session.pop('admin_id', None)
+    flash('Admin logged out.', 'info')
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    """
+    Admin dashboard - aggregate, anonymous usage statistics only
+    """
+    total_users = User.query.count()
+    total_sessions = ChatSession.query.count()
+    completed_sessions = ChatSession.query.filter(
+        ChatSession.end_time.isnot(None)
+    ).count()
+    total_messages = ChatMessage.query.count()
+    total_journals = JournalEntry.query.count()
+    total_breathing = BreathingSession.query.count()
+    active_quotes = DailyMotivation.query.filter_by(is_active=True).count()
+
+    # Average improvement across all completed sessions (anonymous aggregate)
+    improvements = []
+    for s in ChatSession.query.filter(ChatSession.end_time.isnot(None)).all():
+        eff = calculate_effectiveness(s.id)
+        if eff:
+            improvements.append(eff['overall_improvement'])
+    avg_improvement = round(sum(improvements) / len(improvements), 1) if improvements else 0
+
+    return render_template('admin-dashboard.html',
+                           total_users=total_users,
+                           total_sessions=total_sessions,
+                           completed_sessions=completed_sessions,
+                           total_messages=total_messages,
+                           total_journals=total_journals,
+                           total_breathing=total_breathing,
+                           active_quotes=active_quotes,
+                           avg_improvement=avg_improvement)
+
+@app.route('/admin/quotes', methods=['GET', 'POST'])
+@admin_required
+def admin_quotes():
+    """
+    Quote management - add new motivational quotes (IT-04)
+    """
+    if request.method == 'POST':
+        quote_text = request.form.get('quote_text', '').strip()
+        author = request.form.get('author', '').strip()
+
+        if not quote_text:
+            flash('Quote text is required.', 'error')
+        else:
+            try:
+                quote = DailyMotivation(
+                    quote_text=quote_text,
+                    author=author if author else None,
+                    is_active=True
+                )
+                db.session.add(quote)
+                db.session.commit()
+                flash('Quote added successfully!', 'success')
+                return redirect(url_for('admin_quotes'))
+            except Exception as e:
+                db.session.rollback()
+                flash('Error adding quote.', 'error')
+                print(f"Add quote error: {e}")
+
+    quotes = DailyMotivation.query.order_by(DailyMotivation.created_at.desc()).all()
+    return render_template('admin-quotes.html', quotes=quotes)
+
+@app.route('/admin/quotes/toggle/<int:quote_id>', methods=['POST'])
+@admin_required
+def admin_quote_toggle(quote_id):
+    """Activate/deactivate a quote (uses the is_active flag from the ERD)"""
+    quote = DailyMotivation.query.get(quote_id)
+    if quote:
+        quote.is_active = not quote.is_active
+        db.session.commit()
+        state = 'activated' if quote.is_active else 'deactivated'
+        flash(f'Quote {state}.', 'info')
+    return redirect(url_for('admin_quotes'))
+
+@app.route('/admin/quotes/delete/<int:quote_id>', methods=['POST'])
+@admin_required
+def admin_quote_delete(quote_id):
+    """Permanently remove a quote"""
+    quote = DailyMotivation.query.get(quote_id)
+    if quote:
+        db.session.delete(quote)
+        db.session.commit()
+        flash('Quote deleted.', 'info')
+    return redirect(url_for('admin_quotes'))
 
 # ============================================================================
 # ERROR HANDLERS

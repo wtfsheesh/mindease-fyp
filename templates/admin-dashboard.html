@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - MindEase{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-nav { background: #333; }
+.admin-nav .nav-brand { color: white; }
+.admin-nav .btn-logout { color: #ff8a8a; }
+.admin-nav .admin-link {
+    color: #ddd;
+    text-decoration: none;
+    font-weight: 500;
+    margin-right: 20px;
+}
+.admin-nav .admin-link:hover { color: white; }
+.privacy-note {
+    background: #E3F2FD;
+    color: #1565C0;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+    border-left: 4px solid #1565C0;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar admin-nav">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🛡️</span>
+            <span class="nav-brand">MindEase Admin</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('admin_quotes') }}" class="admin-link">Quote Management</a>
+            <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="dashboard-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <h2 style="margin-bottom: 8px;">System Overview</h2>
+    <div class="privacy-note">
+        🔒 Privacy by design: this dashboard shows aggregate, anonymous statistics only.
+        User conversations, journals and individual assessments are never accessible to administrators.
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_users }}</div>
+            <div class="stat-label">Registered Users</div>
+            <div class="stat-icon">👥</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_sessions }}</div>
+            <div class="stat-label">Total Chat Sessions</div>
+            <div class="stat-icon">💬</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ completed_sessions }}</div>
+            <div class="stat-label">Completed Sessions</div>
+            <div class="stat-icon">✅</div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-number">{{ avg_improvement }}%</div>
+            <div class="stat-label">Avg Session Improvement</div>
+            <div class="stat-icon">📈</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_messages }}</div>
+            <div class="stat-label">Messages Exchanged</div>
+            <div class="stat-icon">✉️</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_journals }}</div>
+            <div class="stat-label">Journal Entries</div>
+            <div class="stat-icon">📔</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_breathing }}</div>
+            <div class="stat-label">Breathing Exercises Done</div>
+            <div class="stat-icon">🫁</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ active_quotes }}</div>
+            <div class="stat-label">Active Quotes</div>
+            <div class="stat-icon">💡</div>
+        </div>
+    </div>
+
+    <a href="{{ url_for('admin_quotes') }}" class="btn-primary" style="background: #333;">Manage Motivational Quotes →</a>
+</div>
+{% endblock %}

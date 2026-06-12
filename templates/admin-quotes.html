@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Quote Management - MindEase Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-nav { background: #333; }
+.admin-nav .nav-brand { color: white; }
+.admin-nav .btn-logout { color: #ff8a8a; }
+.admin-nav .admin-link {
+    color: #ddd;
+    text-decoration: none;
+    font-weight: 500;
+    margin-right: 20px;
+}
+.admin-nav .admin-link:hover { color: white; }
+.quotes-container {
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+.add-quote-card {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    margin-bottom: 30px;
+}
+.quote-row {
+    background: white;
+    padding: 20px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+.quote-row.inactive { opacity: 0.55; }
+.quote-body { flex: 1; }
+.quote-content { font-style: italic; margin-bottom: 4px; }
+.quote-by { font-size: 0.85rem; color: var(--text-light); }
+.status-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+.status-badge.on { background: #dcfce7; color: var(--success-green); }
+.status-badge.off { background: #eee; color: #888; }
+.row-actions { display: flex; gap: 8px; }
+.btn-mini {
+    padding: 7px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    border: 1px solid var(--border-gray);
+    background: white;
+}
+.btn-mini:hover { background: var(--bg-gray); }
+.btn-mini.danger { color: #ef4444; border-color: #f3b4b4; }
+.btn-mini.danger:hover { background: #fee2e2; }
+textarea#quote_text {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 1px solid var(--border-gray);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+    resize: vertical;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar admin-nav">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🛡️</span>
+            <span class="nav-brand">MindEase Admin</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('admin_dashboard') }}" class="admin-link">Dashboard</a>
+            <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="quotes-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="add-quote-card">
+        <h3 style="margin-top: 0;">Add New Quote</h3>
+        <form action="{{ url_for('admin_quotes') }}" method="POST">
+            <div class="form-group">
+                <label for="quote_text">Quote Text</label>
+                <textarea id="quote_text" name="quote_text" placeholder="Enter the motivational quote..." required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="author">Author (optional)</label>
+                <input type="text" id="author" name="author" placeholder="e.g. Robert Frost">
+            </div>
+            <button type="submit" class="btn-primary" style="background: #333;">+ Add Quote</button>
+        </form>
+    </div>
+
+    <h3>All Quotes ({{ quotes|length }})</h3>
+    {% for quote in quotes %}
+    <div class="quote-row {% if not quote.is_active %}inactive{% endif %}">
+        <div class="quote-body">
+            <div class="quote-content">"{{ quote.quote_text }}"</div>
+            <div class="quote-by">— {{ quote.author or 'Unknown' }}</div>
+        </div>
+        <span class="status-badge {% if quote.is_active %}on{% else %}off{% endif %}">
+            {{ 'ACTIVE' if quote.is_active else 'INACTIVE' }}
+        </span>
+        <div class="row-actions">
+            <form action="{{ url_for('admin_quote_toggle', quote_id=quote.id) }}" method="POST">
+                <button type="submit" class="btn-mini">{{ 'Deactivate' if quote.is_active else 'Activate' }}</button>
+            </form>
+            <form action="{{ url_for('admin_quote_delete', quote_id=quote.id) }}" method="POST"
+                  onsubmit="return confirm('Delete this quote permanently?');">
+                <button type="submit" class="btn-mini danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
