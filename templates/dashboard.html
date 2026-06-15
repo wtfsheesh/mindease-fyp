@@ -72,8 +72,12 @@
         {% if daily_quote %}
         <div class="quote-card">
             <div class="quote-icon">💬</div>
-            <p class="quote-text">"{{ daily_quote.quote_text }}"</p>
-            <p class="quote-author">— {{ daily_quote.author }}</p>
+            <p class="quote-text" id="quoteText">"{{ daily_quote.quote_text }}"</p>
+            <p class="quote-author" id="quoteAuthor">— {{ daily_quote.author or 'Unknown' }}</p>
+            <button type="button" id="refreshQuoteBtn" onclick="refreshQuote()"
+                    style="margin-top: 12px; background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.5); padding: 7px 16px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;">
+                🔄 New Quote
+            </button>
         </div>
         {% endif %}
         
@@ -110,6 +114,26 @@
         </div>
     </div>
 </div>
+
+<script>
+async function refreshQuote() {
+    const btn = document.getElementById('refreshQuoteBtn');
+    btn.disabled = true;
+    btn.textContent = '🔄 ...';
+    try {
+        const res = await fetch('{{ url_for("random_quote") }}');
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('quoteText').textContent = '"' + data.quote_text + '"';
+            document.getElementById('quoteAuthor').textContent = '— ' + data.author;
+        }
+    } catch (e) {
+        console.error('Could not refresh quote', e);
+    }
+    btn.disabled = false;
+    btn.textContent = '🔄 New Quote';
+}
+</script>
 
 {% if trend_data and trend_data|length >= 2 %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>

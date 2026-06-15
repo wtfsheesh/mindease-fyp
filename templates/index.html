@@ -42,13 +42,34 @@
             color: #555;
             font-weight: 500;
         }
-        input[type="email"], input[type="password"] {
+        input[type="email"], input[type="password"], input[type="text"] {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
             border-radius: 6px;
             box-sizing: border-box;
             font-size: 1rem;
+        }
+        .password-wrap {
+            position: relative;
+        }
+        .password-wrap input {
+            padding-right: 44px;
+        }
+        .toggle-password {
+            position: absolute;
+            top: 50%;
+            right: 6px;
+            transform: translateY(-50%);
+            width: auto;
+            padding: 4px 8px;
+            background: transparent;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+        .toggle-password:hover {
+            background: transparent;
         }
         button {
             width: 100%;
@@ -111,7 +132,10 @@
         </div>
         <div class="form-group">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" required placeholder="••••••••">
+            <div class="password-wrap">
+                <input type="password" id="password" name="password" required placeholder="••••••••">
+                <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Show password">👁️</button>
+            </div>
         </div>
         <button type="submit">Log In</button>
     </form>
@@ -120,6 +144,22 @@
         Don't have an account? <a href="/register">Register here</a>
     </div>
 </div>
+
+<script>
+function togglePassword() {
+    const input = document.getElementById('password');
+    const btn = document.querySelector('.toggle-password');
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+        btn.setAttribute('aria-label', 'Hide password');
+    } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+        btn.setAttribute('aria-label', 'Show password');
+    }
+}
+</script>
 
 </body>
 </html>

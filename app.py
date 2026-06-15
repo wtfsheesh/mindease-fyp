@@ -690,6 +690,23 @@ def journal():
     
     return render_template('journal.html')
 
+@app.route('/api/random-quote')
+@login_required
+def random_quote():
+    """
+    Return a random active motivational quote as JSON, so the dashboard
+    can refresh the quote without reloading the whole page.
+    """
+    active_quotes = DailyMotivation.query.filter_by(is_active=True).all()
+    if not active_quotes:
+        return jsonify({'success': False}), 404
+    quote = random.choice(active_quotes)
+    return jsonify({
+        'success': True,
+        'quote_text': quote.quote_text,
+        'author': quote.author or 'Unknown'
+    })
+
 @app.route('/journal/entries')
 @login_required
 def journal_entries():
