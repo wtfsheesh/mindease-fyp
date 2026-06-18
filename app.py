@@ -927,6 +927,156 @@ def admin_quote_delete(quote_id):
         flash('Quote deleted.', 'info')
     return redirect(url_for('admin_quotes'))
 
+# ---------------------------------------------------------------------------
+# Admin: User Management (account administration)
+# Admin can list/add/remove accounts and see per-user ACTIVITY COUNTS only.
+# Conversation text and journal content are never exposed - privacy by design.
+# ---------------------------------------------------------------------------
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """List all user accounts with aggregate activity counts (no content)."""
+    users = User.query.order_by(User.created_at.desc()).all()
+    user_rows = []
+    for u in users:
+        session_count = ChatSession.query.filter_by(user_id=u.id).count()
+        journal_count = JournalEntry.query.filter_by(user_id=u.id).count()
+        user_rows.append({
+            'id': u.id,
+            'email': u.email,
+            'name': u.profile.name if u.profile and u.profile.name else '-',
+            'age_group': u.profile.age_group if u.profile and u.profile.age_group else '-',
+            'created_at': u.created_at,
+            'sessions': session_count,
+            'journals': journal_count
+        })
+    return render_template('admin-users.html', users=user_rows)
+
+@app.route('/admin/users/add', methods=['POST'])
+@admin_required
+def admin_user_add():
+    """Create a new user account from the admin panel."""
+    email = request.form.get('email', '').strip()
+    password = request.form.get('password', '')
+    name = request.form.get('name', '').strip()
+
+    if not email or not password:
+        flash('Email and password are required.', 'error')
+        return redirect(url_for('admin_users'))
+
+    if len(password) < 8:
+        flash('Password must be at least 8 characters.', 'error')
+        return redirect(url_for('admin_users'))
+
+    if User.query.filter_by(email=email).first():
+        flash('An account with this email already exists.', 'error')
+        return redirect(url_for('admin_users'))
+
+    try:
+        new_user = User(email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.flush()
+        if name:
+            db.session.add(Profile(user_id=new_user.id, name=name))
+        db.session.commit()
+        flash(f'User {email} created.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Error creating user.', 'error')
+        print(f"Admin add user error: {e}")
+
+    return redirect(url_for('admin_users'))
+
+@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_user_delete(user_id):
+    """Delete a user account and all their data (cascade)."""
+    user = User.query.get(user_id)
+    if user:
+        try:
+            email = user.email
+            db.session.delete(user)  # cascades to sessions, journals, etc.
+            db.session.commit()
+            flash(f'User {email} and all their data deleted.', 'info')
+        except Exception as e:
+            db.session.rollback()
+            flash('Error deleting user.', 'error')
+            print(f"Admin delete user error: {e}")
+    else:
+        flash('User not found.', 'error')
+    return redirect(url_for('admin_users'))
+
+# ---------------------------------------------------------------------------
+# Admin: Analytics (aggregate, anonymous data visualisations)
+# ---------------------------------------------------------------------------
+
+@app.route('/admin/analytics')
+@admin_required
+def admin_analytics():
+    """Aggregate visualisations of system-wide, anonymous data."""
+    from collections import defaultdict
+
+    # 1. User registrations per day (cumulative growth)
+    reg_by_day = defaultdict(int)
+    for u in User.query.all():
+        reg_by_day[u.created_at.strftime('%d %b')] += 1
+    # Preserve chronological order
+    reg_sorted = sorted(User.query.all(), key=lambda u: u.created_at)
+    reg_labels, reg_counts, running = [], [], 0
+    seen = set()
+    for u in reg_sorted:
+        day = u.created_at.strftime('%d %b')
+        running += 1
+        if day in seen:
+            reg_counts[-1] = running
+        else:
+            seen.add(day)
+            reg_labels.append(day)
+            reg_counts.append(running)
+
+    # 2. Sessions per day
+    sess_by_day = defaultdict(int)
+    for s in ChatSession.query.all():
+        sess_by_day[s.start_time.strftime('%d %b')] += 1
+    sess_labels = sorted(sess_by_day.keys(),
+                         key=lambda d: datetime.strptime(d, '%d %b'))
+    sess_counts = [sess_by_day[d] for d in sess_labels]
+
+    # 3. Journal mood distribution (anonymous counts only)
+    mood_by_type = defaultdict(int)
+    for j in JournalEntry.query.all():
+        mood_by_type[j.mood or 'Unspecified'] += 1
+    mood_labels = list(mood_by_type.keys())
+    mood_counts = [mood_by_type[m] for m in mood_labels]
+
+    # 4. Breathing technique popularity
+    tech_by_type = defaultdict(int)
+    for b in BreathingSession.query.all():
+        tech_by_type[b.technique] += 1
+    tech_labels = list(tech_by_type.keys())
+    tech_counts = [tech_by_type[t] for t in tech_labels]
+
+    # 5. Average pre vs post score per dimension (effectiveness evidence)
+    dims = ['stress_level', 'mood', 'sleep_quality', 'energy_level', 'anxiety_level']
+    dim_labels = ['Stress', 'Mood', 'Sleep', 'Energy', 'Anxiety']
+    pre_avgs, post_avgs = [], []
+    pre_surveys = PreSurvey.query.all()
+    post_surveys = PostSurvey.query.all()
+    for d in dims:
+        pre_vals = [getattr(p, d) for p in pre_surveys]
+        post_vals = [getattr(p, d) for p in post_surveys]
+        pre_avgs.append(round(sum(pre_vals) / len(pre_vals), 2) if pre_vals else 0)
+        post_avgs.append(round(sum(post_vals) / len(post_vals), 2) if post_vals else 0)
+
+    return render_template('admin-analytics.html',
+                           reg_labels=reg_labels, reg_counts=reg_counts,
+                           sess_labels=sess_labels, sess_counts=sess_counts,
+                           mood_labels=mood_labels, mood_counts=mood_counts,
+                           tech_labels=tech_labels, tech_counts=tech_counts,
+                           dim_labels=dim_labels, pre_avgs=pre_avgs, post_avgs=post_avgs)
+
 # ============================================================================
 # ERROR HANDLERS
 # ============================================================================

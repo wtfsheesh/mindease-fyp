@@ -40,7 +40,9 @@
             <span class="nav-brand">MindEase Admin</span>
         </div>
         <div class="nav-right">
-            <a href="{{ url_for('admin_quotes') }}" class="admin-link">Quote Management</a>
+            <a href="{{ url_for('admin_users') }}" class="admin-link">Users</a>
+            <a href="{{ url_for('admin_analytics') }}" class="admin-link">Analytics</a>
+            <a href="{{ url_for('admin_quotes') }}" class="admin-link">Quotes</a>
             <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
         </div>
     </div>
@@ -104,6 +106,10 @@
         </div>
     </div>
 
-    <a href="{{ url_for('admin_quotes') }}" class="btn-primary" style="background: #333;">Manage Motivational Quotes →</a>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <a href="{{ url_for('admin_users') }}" class="btn-primary" style="background: #333;">Manage Users →</a>
+        <a href="{{ url_for('admin_analytics') }}" class="btn-primary" style="background: #333;">View Analytics →</a>
+        <a href="{{ url_for('admin_quotes') }}" class="btn-primary" style="background: #333;">Manage Quotes →</a>
+    </div>
 </div>
 {% endblock %}

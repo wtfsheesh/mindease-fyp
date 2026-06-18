@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - MindEase Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-nav { background: #333; }
+.admin-nav .nav-brand { color: white; }
+.admin-nav .btn-logout { color: #ff8a8a; }
+.admin-nav .admin-link {
+    color: #ddd;
+    text-decoration: none;
+    font-weight: 500;
+    margin-right: 20px;
+}
+.admin-nav .admin-link:hover { color: white; }
+.analytics-container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+}
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+    margin-top: 20px;
+}
+.chart-card {
+    background: white;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+.chart-card h3 { margin: 0 0 4px 0; font-size: 1.05rem; }
+.chart-card p { margin: 0 0 16px 0; color: var(--text-light); font-size: 0.85rem; }
+.privacy-note {
+    background: #E3F2FD;
+    color: #1565C0;
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    margin-bottom: 20px;
+    border-left: 4px solid #1565C0;
+}
+.no-data {
+    text-align: center;
+    color: #aaa;
+    padding: 40px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar admin-nav">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🛡️</span>
+            <span class="nav-brand">MindEase Admin</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('admin_dashboard') }}" class="admin-link">Dashboard</a>
+            <a href="{{ url_for('admin_users') }}" class="admin-link">Users</a>
+            <a href="{{ url_for('admin_quotes') }}" class="admin-link">Quotes</a>
+            <a href="{{ url_for('admin_logout') }}" class="btn-logout">Logout</a>
+        </div>
+    </div>
+</nav>
+
+<div class="analytics-container">
+    <h2 style="margin-bottom: 8px;">Analytics</h2>
+    <div class="privacy-note">
+        📊 All charts show aggregate, anonymous data across the whole system. No individual
+        user can be identified from these visualisations.
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h3>User Growth</h3>
+            <p>Cumulative registered users over time</p>
+            <canvas id="growthChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Sessions Over Time</h3>
+            <p>Chat sessions started per day</p>
+            <canvas id="sessionsChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Average Stress Dimensions: Before vs After</h3>
+            <p>Mean score per dimension across all sessions (lower stress/anxiety &amp; higher mood/sleep/energy = better)</p>
+            <canvas id="dimChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Journal Mood Distribution</h3>
+            <p>Moods tagged across all journal entries</p>
+            <canvas id="moodChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Breathing Technique Popularity</h3>
+            <p>Completed breathing exercises by technique</p>
+            <canvas id="techChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const palette = ['#4A90E2', '#22c55e', '#FF9800', '#9C27B0', '#ef4444', '#00BCD4', '#795548'];
+
+// 1. User growth (cumulative line)
+new Chart(document.getElementById('growthChart'), {
+    type: 'line',
+    data: {
+        labels: {{ reg_labels | tojson }},
+        datasets: [{
+            label: 'Total Users',
+            data: {{ reg_counts | tojson }},
+            borderColor: '#4A90E2',
+            backgroundColor: 'rgba(74,144,226,0.12)',
+            fill: true, tension: 0.3, pointRadius: 4
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+// 2. Sessions per day (bar)
+new Chart(document.getElementById('sessionsChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ sess_labels | tojson }},
+        datasets: [{
+            label: 'Sessions',
+            data: {{ sess_counts | tojson }},
+            backgroundColor: '#22c55e'
+        }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+               scales: { y: { ticks: { precision: 0 } } } }
+});
+
+// 3. Pre vs post average per dimension (grouped bar)
+new Chart(document.getElementById('dimChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ dim_labels | tojson }},
+        datasets: [
+            { label: 'Before', data: {{ pre_avgs | tojson }}, backgroundColor: '#ef4444' },
+            { label: 'After', data: {{ post_avgs | tojson }}, backgroundColor: '#22c55e' }
+        ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, max: 5 } } }
+});
+
+// 4. Mood distribution (doughnut)
+new Chart(document.getElementById('moodChart'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ mood_labels | tojson }},
+        datasets: [{ data: {{ mood_counts | tojson }}, backgroundColor: palette }]
+    },
+    options: { responsive: true }
+});
+
+// 5. Breathing technique popularity (bar)
+new Chart(document.getElementById('techChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ tech_labels | tojson }},
+        datasets: [{ label: 'Completions', data: {{ tech_counts | tojson }}, backgroundColor: '#9C27B0' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } },
+               scales: { y: { ticks: { precision: 0 } } } }
+});
+</script>
+{% endblock %}

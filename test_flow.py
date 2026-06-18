@@ -175,6 +175,24 @@ with app.app_context():
     deleted = DailyMotivation.query.get(qid) is None
 check("Admin delete quote", deleted)
 
+# 19. Admin user management
+r = admin_client.get("/admin/users")
+check("Admin users list", r.status_code == 200 and b"User Management" in r.data)
+
+r = admin_client.post("/admin/users/add", data={"email": "byadmin@test.my", "name": "By Admin", "password": "byadmin123"}, follow_redirects=True)
+check("Admin add user", b"created" in r.data and b"byadmin@test.my" in r.data)
+
+with app.app_context():
+    new_uid = User.query.filter_by(email="byadmin@test.my").first().id
+r = admin_client.post(f"/admin/users/delete/{new_uid}", follow_redirects=True)
+with app.app_context():
+    user_gone = User.query.get(new_uid) is None
+check("Admin delete user", user_gone)
+
+# 20. Admin analytics page with charts
+r = admin_client.get("/admin/analytics")
+check("Admin analytics page", r.status_code == 200 and b"growthChart" in r.data and b"moodChart" in r.data)
+
 print()
 passed = sum(1 for _, ok, _ in results if ok)
 print(f"=== {passed}/{len(results)} checks passed ===")
