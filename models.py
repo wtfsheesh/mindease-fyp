@@ -307,12 +307,45 @@ class DailyMotivation(db.Model):
     quote_text = db.Column(db.Text, nullable=False)
     author = db.Column(db.String(100), nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    
+
+    # Emotion category for mood-adaptive quotes. 'general' quotes are shown
+    # for a Neutral mood or as a fallback when a category has no quotes.
+    emotion = db.Column(db.String(20), nullable=False, default='general')
+
     # Timestamp
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
+
     def __repr__(self):
-        return f'<DailyMotivation by {self.author}>'
+        return f'<DailyMotivation ({self.emotion}) by {self.author}>'
+
+
+# Valid emotion categories for quotes and the dashboard mood picker.
+# These mirror the journal mood vocabulary already used in the app.
+QUOTE_EMOTIONS = ['Happy', 'Calm', 'Stressed', 'Sad', 'Anxious', 'Neutral']
+
+
+def get_quote_for_emotion(emotion=None):
+    """
+    Pick an active motivational quote matching the user's current emotion.
+
+    - A specific emotion (Happy/Calm/Stressed/Sad/Anxious) returns a random
+      quote from that category.
+    - 'Neutral', None, or an empty/unknown category returns a fully random
+      quote (the requested 'neutral -> randomized' behaviour).
+    - If a category has no quotes yet, it gracefully falls back to a random
+      active quote so the dashboard is never left blank.
+    """
+    import random as _random
+
+    base = DailyMotivation.query.filter_by(is_active=True)
+    candidates = None
+    if emotion and emotion not in ('Neutral', 'general', ''):
+        candidates = base.filter_by(emotion=emotion).all()
+    if not candidates:
+        candidates = base.all()
+    if not candidates:
+        return None
+    return _random.choice(candidates)
 
 
 # ============================================================================

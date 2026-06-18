@@ -14,8 +14,9 @@ import random
 load_dotenv()
 
 # Import database models
-from models import db, User, Profile, ChatSession, ChatMessage, PreSurvey, PostSurvey, JournalEntry, BreathingSession, DailyMotivation, Admin, calculate_effectiveness
+from models import db, User, Profile, ChatSession, ChatMessage, PreSurvey, PostSurvey, JournalEntry, BreathingSession, DailyMotivation, Admin, calculate_effectiveness, get_quote_for_emotion, QUOTE_EMOTIONS
 from functools import wraps
+from sqlalchemy import inspect as sa_inspect, text as sa_text
 
 # Import Gemini chatbot
 from gemini_api import create_chatbot
@@ -51,6 +52,49 @@ login_manager.login_message = 'Please log in to access this page.'
 # Create database tables
 with app.app_context():
     db.create_all()
+
+    # Lightweight migration: add the 'emotion' column to existing databases
+    # (db.create_all does not alter tables that already exist).
+    _cols = [c['name'] for c in sa_inspect(db.engine).get_columns('daily_motivation')]
+    if 'emotion' not in _cols:
+        db.session.execute(sa_text(
+            "ALTER TABLE daily_motivation ADD COLUMN emotion "
+            "VARCHAR(20) NOT NULL DEFAULT 'general'"
+        ))
+        db.session.commit()
+        print("Migrated: added 'emotion' column to daily_motivation")
+
+    # Seed a few emotion-specific quotes if a category has none yet, so the
+    # mood-adaptive feature has content out of the box.
+    _emotion_seed = {
+        'Happy': [
+            ('Happiness is not something ready made. It comes from your own actions.', 'Dalai Lama'),
+            ('Celebrate the small wins; they add up to big victories.', 'Anonymous'),
+        ],
+        'Calm': [
+            ('Within you there is a stillness and a sanctuary to which you can retreat at any time.', 'Hermann Hesse'),
+            ('Calm mind brings inner strength and self-confidence.', 'Dalai Lama'),
+        ],
+        'Stressed': [
+            ('You don\'t have to control your thoughts. You just have to stop letting them control you.', 'Dan Millman'),
+            ('Almost everything will work again if you unplug it for a few minutes, including you.', 'Anne Lamott'),
+        ],
+        'Sad': [
+            ('Even the darkest night will end and the sun will rise.', 'Victor Hugo'),
+            ('Your present circumstances don\'t determine where you can go; they merely determine where you start.', 'Nido Qubein'),
+        ],
+        'Anxious': [
+            ('You don\'t have to see the whole staircase, just take the first step.', 'Martin Luther King Jr.'),
+            ('Nothing diminishes anxiety faster than action.', 'Walter Anderson'),
+        ],
+    }
+    for _emotion, _pairs in _emotion_seed.items():
+        if DailyMotivation.query.filter_by(emotion=_emotion).count() == 0:
+            for _text, _author in _pairs:
+                db.session.add(DailyMotivation(
+                    quote_text=_text, author=_author, is_active=True, emotion=_emotion
+                ))
+    db.session.commit()
 
     # Seed default admin account if none exists (Use Case 11 from FYP1)
     # Credentials configurable via .env: ADMIN_USERNAME / ADMIN_PASSWORD
@@ -223,11 +267,11 @@ def dashboard():
 
     stress_reductions = []
     trend_data = []
-    for session in completed_sessions:
-        effectiveness = calculate_effectiveness(session.id)
+    for cs in completed_sessions:
+        effectiveness = calculate_effectiveness(cs.id)
         if effectiveness:
             trend_data.append({
-                'date': session.start_time.strftime('%d %b'),
+                'date': cs.start_time.strftime('%d %b'),
                 'improvement': effectiveness['overall_improvement'],
                 'pre': effectiveness['pre_total'],
                 'post': effectiveness['post_total']
@@ -240,24 +284,24 @@ def dashboard():
     # Get total journal entries
     total_journals = JournalEntry.query.filter_by(user_id=current_user.id).count()
     
-    # Get random motivational quote
-    active_quotes = DailyMotivation.query.filter_by(is_active=True).all()
-    if active_quotes:
-        daily_quote = random.choice(active_quotes)
-    else:
-        daily_quote = None
-    
+    # Get a motivational quote adapted to the user's current mood
+    # (mood is chosen via the dashboard picker and remembered in the session)
+    current_mood = session.get('current_mood', 'Neutral')
+    daily_quote = get_quote_for_emotion(current_mood)
+
     # Get user name for welcome message
     user_name = current_user.email.split('@')[0]  # Default to email prefix
     if current_user.profile and current_user.profile.name:
         user_name = current_user.profile.name
-    
+
     return render_template('dashboard.html',
                          user_name=user_name,
                          total_sessions=total_sessions,
                          avg_stress_reduction=avg_stress_reduction,
                          total_journals=total_journals,
                          daily_quote=daily_quote,
+                         current_mood=current_mood,
+                         mood_options=QUOTE_EMOTIONS,
                          trend_data=trend_data)
 
 # Pre-session assesment
@@ -694,17 +738,24 @@ def journal():
 @login_required
 def random_quote():
     """
-    Return a random active motivational quote as JSON, so the dashboard
-    can refresh the quote without reloading the whole page.
+    Return a motivational quote as JSON, adapted to the requested emotion,
+    so the dashboard can refresh without reloading. When an 'emotion' query
+    param is given it is remembered in the session as the user's current mood.
     """
-    active_quotes = DailyMotivation.query.filter_by(is_active=True).all()
-    if not active_quotes:
+    emotion = request.args.get('emotion')
+    if emotion is not None:
+        session['current_mood'] = emotion          # remember the selection
+    else:
+        emotion = session.get('current_mood', 'Neutral')
+
+    quote = get_quote_for_emotion(emotion)
+    if not quote:
         return jsonify({'success': False}), 404
-    quote = random.choice(active_quotes)
     return jsonify({
         'success': True,
         'quote_text': quote.quote_text,
-        'author': quote.author or 'Unknown'
+        'author': quote.author or 'Unknown',
+        'emotion': emotion or 'Neutral'
     })
 
 @app.route('/journal/entries')
@@ -882,6 +933,7 @@ def admin_quotes():
     if request.method == 'POST':
         quote_text = request.form.get('quote_text', '').strip()
         author = request.form.get('author', '').strip()
+        emotion = request.form.get('emotion', 'general').strip() or 'general'
 
         if not quote_text:
             flash('Quote text is required.', 'error')
@@ -890,7 +942,8 @@ def admin_quotes():
                 quote = DailyMotivation(
                     quote_text=quote_text,
                     author=author if author else None,
-                    is_active=True
+                    is_active=True,
+                    emotion=emotion
                 )
                 db.session.add(quote)
                 db.session.commit()
@@ -902,7 +955,9 @@ def admin_quotes():
                 print(f"Add quote error: {e}")
 
     quotes = DailyMotivation.query.order_by(DailyMotivation.created_at.desc()).all()
-    return render_template('admin-quotes.html', quotes=quotes)
+    # Emotion options for the dropdown: specific moods + General
+    emotion_options = ['general'] + [e for e in QUOTE_EMOTIONS if e != 'Neutral']
+    return render_template('admin-quotes.html', quotes=quotes, emotion_options=emotion_options)
 
 @app.route('/admin/quotes/toggle/<int:quote_id>', methods=['POST'])
 @admin_required
@@ -1099,4 +1154,7 @@ def internal_error(error):
 if __name__ == '__main__':
     # Run Flask development server
     # In production, use gunicorn or similar WSGI server
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # PORT is read from the environment so hosting platforms (and the
+    # preview tool) can assign a port; defaults to 5000 for local use.
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

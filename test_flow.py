@@ -193,6 +193,18 @@ check("Admin delete user", user_gone)
 r = admin_client.get("/admin/analytics")
 check("Admin analytics page", r.status_code == 200 and b"growthChart" in r.data and b"moodChart" in r.data)
 
+# 21. Mood-adaptive quotes (re-login: client was logged out above)
+client.post("/login", data={"email": EMAIL, "password": PASSWORD}, follow_redirects=True)
+r = client.get("/dashboard")
+check("Dashboard mood picker", b"How are you feeling right now" in r.data and b"mood-chip" in r.data)
+
+r = client.get("/api/random-quote?emotion=Anxious")
+d = r.get_json()
+check("Mood-adaptive quote API (Anxious)", d.get("success") and d.get("emotion") == "Anxious")
+
+r = client.get("/api/random-quote?emotion=Neutral")
+check("Neutral mood returns a quote", r.get_json().get("success"))
+
 print()
 passed = sum(1 for _, ok, _ in results if ok)
 print(f"=== {passed}/{len(results)} checks passed ===")

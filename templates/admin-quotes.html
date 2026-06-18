@@ -112,6 +112,15 @@ textarea#quote_text {
                 <label for="author">Author (optional)</label>
                 <input type="text" id="author" name="author" placeholder="e.g. Robert Frost">
             </div>
+            <div class="form-group">
+                <label for="emotion">Emotion Category</label>
+                <select id="emotion" name="emotion" style="width: 100%; padding: 11px; border: 1px solid var(--border-gray); border-radius: 4px; font-size: 14px; background: white;">
+                    {% for opt in emotion_options %}
+                    <option value="{{ opt }}">{{ 'General (any mood)' if opt == 'general' else opt }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color: var(--text-light);">Shown to users who select this mood. "General" appears for Neutral mood and as a fallback.</small>
+            </div>
             <button type="submit" class="btn-primary" style="background: #333;">+ Add Quote</button>
         </form>
     </div>
@@ -121,7 +130,11 @@ textarea#quote_text {
     <div class="quote-row {% if not quote.is_active %}inactive{% endif %}">
         <div class="quote-body">
             <div class="quote-content">"{{ quote.quote_text }}"</div>
-            <div class="quote-by">— {{ quote.author or 'Unknown' }}</div>
+            <div class="quote-by">— {{ quote.author or 'Unknown' }}
+                <span style="display:inline-block; margin-left:8px; padding:2px 9px; border-radius:10px; background:#ede7f6; color:#5e35b1; font-size:12px; font-weight:600;">
+                    {{ 'General' if quote.emotion == 'general' else quote.emotion }}
+                </span>
+            </div>
         </div>
         <span class="status-badge {% if quote.is_active %}on{% else %}off{% endif %}">
             {{ 'ACTIVE' if quote.is_active else 'INACTIVE' }}

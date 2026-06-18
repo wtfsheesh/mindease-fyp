@@ -19,59 +19,31 @@ def init_database():
         print("Creating database tables...")
         db.create_all()
         
-        # Seed motivational quotes
+        # Seed motivational quotes (with emotion categories for mood-adaptive display)
         print("Seeding motivational quotes...")
         quotes = [
-            {
-                'quote_text': 'Progress, not perfection. Something rather than nothing.',
-                'author': 'Shannon',
-                'is_active': True
-            },
-            {
-                'quote_text': 'You are braver than you believe, stronger than you seem, and smarter than you think.',
-                'author': 'A.A. Milne',
-                'is_active': True
-            },
-            {
-                'quote_text': 'The only way out is through.',
-                'author': 'Robert Frost',
-                'is_active': True
-            },
-            {
-                'quote_text': 'You do not have to be good. You do not have to walk on your knees for a hundred miles through the desert, repenting. You only have to let the soft animal of your body love what it loves.',
-                'author': 'Mary Oliver',
-                'is_active': True
-            },
-            {
-                'quote_text': 'Be kind to yourself. You are doing the best you can.',
-                'author': 'Anonymous',
-                'is_active': True
-            },
-            {
-                'quote_text': 'Sometimes the smallest step in the right direction ends up being the biggest step of your life.',
-                'author': 'Anonymous',
-                'is_active': True
-            },
-            {
-                'quote_text': 'It is okay to take a break. It is okay to ask for help. It is okay to not be okay.',
-                'author': 'Anonymous',
-                'is_active': True
-            },
-            {
-                'quote_text': 'Your mental health is a priority. Your happiness is essential. Your self-care is a necessity.',
-                'author': 'Anonymous',
-                'is_active': True
-            },
-            {
-                'quote_text': 'Healing is not linear. Some days will be better than others.',
-                'author': 'Anonymous',
-                'is_active': True
-            },
-            {
-                'quote_text': 'You have survived 100% of your worst days. You are doing great.',
-                'author': 'Anonymous',
-                'is_active': True
-            }
+            # General quotes (shown for Neutral mood or as a fallback)
+            {'quote_text': 'Progress, not perfection. Something rather than nothing.', 'author': 'Shannon', 'is_active': True, 'emotion': 'general'},
+            {'quote_text': 'You are braver than you believe, stronger than you seem, and smarter than you think.', 'author': 'A.A. Milne', 'is_active': True, 'emotion': 'general'},
+            {'quote_text': 'The only way out is through.', 'author': 'Robert Frost', 'is_active': True, 'emotion': 'general'},
+            {'quote_text': 'Be kind to yourself. You are doing the best you can.', 'author': 'Anonymous', 'is_active': True, 'emotion': 'general'},
+            {'quote_text': 'Healing is not linear. Some days will be better than others.', 'author': 'Anonymous', 'is_active': True, 'emotion': 'general'},
+            {'quote_text': 'You have survived 100% of your worst days. You are doing great.', 'author': 'Anonymous', 'is_active': True, 'emotion': 'general'},
+            # Happy
+            {'quote_text': 'Happiness is not something ready made. It comes from your own actions.', 'author': 'Dalai Lama', 'is_active': True, 'emotion': 'Happy'},
+            {'quote_text': 'Celebrate the small wins; they add up to big victories.', 'author': 'Anonymous', 'is_active': True, 'emotion': 'Happy'},
+            # Calm
+            {'quote_text': 'Within you there is a stillness and a sanctuary to which you can retreat at any time.', 'author': 'Hermann Hesse', 'is_active': True, 'emotion': 'Calm'},
+            {'quote_text': 'Calm mind brings inner strength and self-confidence.', 'author': 'Dalai Lama', 'is_active': True, 'emotion': 'Calm'},
+            # Stressed
+            {'quote_text': 'You do not have to control your thoughts. You just have to stop letting them control you.', 'author': 'Dan Millman', 'is_active': True, 'emotion': 'Stressed'},
+            {'quote_text': 'Almost everything will work again if you unplug it for a few minutes, including you.', 'author': 'Anne Lamott', 'is_active': True, 'emotion': 'Stressed'},
+            # Sad
+            {'quote_text': 'Even the darkest night will end and the sun will rise.', 'author': 'Victor Hugo', 'is_active': True, 'emotion': 'Sad'},
+            {'quote_text': "Your present circumstances don't determine where you can go; they merely determine where you start.", 'author': 'Nido Qubein', 'is_active': True, 'emotion': 'Sad'},
+            # Anxious
+            {'quote_text': "You don't have to see the whole staircase, just take the first step.", 'author': 'Martin Luther King Jr.', 'is_active': True, 'emotion': 'Anxious'},
+            {'quote_text': 'Nothing diminishes anxiety faster than action.', 'author': 'Walter Anderson', 'is_active': True, 'emotion': 'Anxious'},
         ]
         
         for quote_data in quotes:

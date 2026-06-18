@@ -69,6 +69,21 @@
         </div>
         {% endif %}
 
+        <div class="mood-picker-card" style="background:#fff; border-radius:10px; padding:20px 25px; box-shadow:0 4px 12px rgba(0,0,0,0.03); margin-bottom:25px;">
+            <h3 style="margin:0 0 4px 0; font-size:1.1rem;">How are you feeling right now?</h3>
+            <p style="margin:0 0 14px 0; color:var(--text-light); font-size:0.88rem;">We'll tailor your motivational quote to your mood.</p>
+            <div class="mood-row" style="display:flex; flex-wrap:wrap; gap:10px;">
+                {% set mood_emoji = {'Happy':'😊','Calm':'😌','Stressed':'😰','Sad':'😢','Anxious':'😫','Neutral':'😐'} %}
+                {% for mood in mood_options %}
+                <button type="button" class="mood-chip{% if mood == current_mood %} selected{% endif %}"
+                        data-mood="{{ mood }}" onclick="selectMood('{{ mood }}', this)"
+                        style="padding:8px 16px; border-radius:20px; border:2px solid var(--border-gray); background:#fff; cursor:pointer; font-size:0.9rem;">
+                    {{ mood_emoji[mood] }} {{ mood }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
         {% if daily_quote %}
         <div class="quote-card">
             <div class="quote-icon">💬</div>
@@ -115,21 +130,41 @@
     </div>
 </div>
 
+<style>
+.mood-chip.selected {
+    background: var(--primary-blue) !important;
+    color: #fff;
+    border-color: var(--primary-blue) !important;
+}
+.mood-chip:hover { border-color: var(--primary-blue); }
+</style>
 <script>
-async function refreshQuote() {
-    const btn = document.getElementById('refreshQuoteBtn');
-    btn.disabled = true;
-    btn.textContent = '🔄 ...';
+async function updateQuote(url) {
     try {
-        const res = await fetch('{{ url_for("random_quote") }}');
+        const res = await fetch(url);
         const data = await res.json();
         if (data.success) {
             document.getElementById('quoteText').textContent = '"' + data.quote_text + '"';
             document.getElementById('quoteAuthor').textContent = '— ' + data.author;
         }
     } catch (e) {
-        console.error('Could not refresh quote', e);
+        console.error('Could not load quote', e);
     }
+}
+
+// User picked a mood -> highlight it and fetch a matching quote
+function selectMood(mood, btn) {
+    document.querySelectorAll('.mood-chip').forEach(c => c.classList.remove('selected'));
+    btn.classList.add('selected');
+    updateQuote('{{ url_for("random_quote") }}?emotion=' + encodeURIComponent(mood));
+}
+
+// "New Quote" button -> another quote within the currently selected mood
+async function refreshQuote() {
+    const btn = document.getElementById('refreshQuoteBtn');
+    btn.disabled = true;
+    btn.textContent = '🔄 ...';
+    await updateQuote('{{ url_for("random_quote") }}');
     btn.disabled = false;
     btn.textContent = '🔄 New Quote';
 }
