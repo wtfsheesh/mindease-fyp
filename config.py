@@ -1,6 +1,4 @@
-# config.py
 # Configuration settings for MindEase application
-# Based on FYP1 Report - Technology Stack Section
 
 import os
 from datetime import timedelta
@@ -38,7 +36,7 @@ class Config:
     # Application Settings
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     
-    # Performance Settings (from FYP report - under 2 seconds response time)
+    
     RESPONSE_TIMEOUT = 2
     
     # Security Settings

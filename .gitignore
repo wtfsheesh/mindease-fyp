@@ -3,3 +3,6 @@ venv/
 __pycache__/
 instance/
 .env
+flask_out.txt
+flask_err.txt
+*.log
