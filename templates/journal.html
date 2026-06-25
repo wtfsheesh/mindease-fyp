@@ -107,9 +107,16 @@ textarea:focus {
             </div>
 
             <div class="form-group">
-                <label for="content">Your Thoughts</label>
-                <textarea id="content" name="content" placeholder="Write about your feelings, experiences, or anything on your mind..." required>{{ entry.content if entry else '' }}</textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label for="content" style="margin:0;">Your Thoughts</label>
+                    <button type="button" id="voiceBtn" onclick="toggleVoice()"
+                            style="display:none; padding:6px 14px; border:1px solid var(--primary-blue); background:#fff; color:var(--primary-blue); border-radius:20px; cursor:pointer; font-size:0.85rem;">
+                        🎤 Speak
+                    </button>
+                </div>
+                <textarea id="content" name="content" placeholder="Write about your feelings, experiences, or anything on your mind... (or use the Speak button to dictate)" required>{{ entry.content if entry else '' }}</textarea>
                 <small id="charCount">0 / 5000 characters</small>
+                <small id="voiceStatus" style="display:none; color: var(--primary-blue); font-weight:500;"></small>
             </div>
 
             <div class="form-group">
@@ -154,5 +161,71 @@ document.querySelectorAll('.mood-option').forEach(option => {
         document.getElementById('mood').value = this.dataset.mood;
     });
 });
+
+// --- Voice journaling (speech-to-text via the browser's Web Speech API) ---
+// We transcribe speech straight into the text box; nothing is recorded or
+// stored as audio. Typing still works exactly as before - voice is an optional
+// alternative input. The button only appears if the browser supports it.
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isListening = false;
+
+if (SpeechRecognition) {
+    document.getElementById('voiceBtn').style.display = 'inline-block';  // supported -> show it
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+
+    const content = document.getElementById('content');
+    const status = document.getElementById('voiceStatus');
+
+    recognition.onresult = function(event) {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        // Append the spoken words to whatever is already typed/dictated
+        const sep = content.value && !content.value.endsWith(' ') ? ' ' : '';
+        content.value += sep + transcript.trim();
+        content.dispatchEvent(new Event('input'));  // refresh the character counter
+    };
+    recognition.onend = function() {
+        if (isListening) recognition.start();  // keep listening until user stops
+    };
+    recognition.onerror = function(e) {
+        stopVoice();
+        status.textContent = 'Voice input unavailable (' + e.error + '). You can still type.';
+        status.style.display = 'block';
+    };
+}
+
+function toggleVoice() {
+    if (!recognition) return;
+    isListening ? stopVoice() : startVoice();
+}
+function startVoice() {
+    isListening = true;
+    recognition.start();
+    const btn = document.getElementById('voiceBtn');
+    btn.textContent = '⏹ Stop';
+    btn.style.background = '#fee2e2';
+    btn.style.color = '#ef4444';
+    btn.style.borderColor = '#ef4444';
+    const status = document.getElementById('voiceStatus');
+    status.textContent = 'Listening... speak naturally, then press Stop.';
+    status.style.display = 'block';
+}
+function stopVoice() {
+    isListening = false;
+    if (recognition) recognition.stop();
+    const btn = document.getElementById('voiceBtn');
+    btn.textContent = '🎤 Speak';
+    btn.style.background = '#fff';
+    btn.style.color = 'var(--primary-blue)';
+    btn.style.borderColor = 'var(--primary-blue)';
+    document.getElementById('voiceStatus').style.display = 'none';
+}
 </script>
 {% endblock %}
