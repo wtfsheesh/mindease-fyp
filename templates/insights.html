@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}AI Wellness Insights - MindEase{% endblock %}
+
+{% block extra_css %}
+<style>
+.insights-container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+.insights-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.summary-box {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    text-align: center;
+}
+.summary-box .num { font-size: 1.7rem; font-weight: 700; color: var(--primary-blue); }
+.summary-box .lbl { font-size: 0.82rem; color: var(--text-light); margin-top: 2px; }
+.insights-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    margin-bottom: 24px;
+}
+.generate-btn {
+    background: linear-gradient(135deg, #4A90E2, #357ABD);
+    color: #fff;
+    border: none;
+    padding: 13px 28px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.generate-btn:disabled { opacity: 0.7; cursor: default; }
+.insight-item {
+    background: #f0f4f8;
+    border-left: 4px solid var(--primary-blue);
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    line-height: 1.55;
+}
+.spinner-dots span {
+    display:inline-block; width:8px; height:8px; margin:0 2px;
+    background:var(--primary-blue); border-radius:50%;
+    animation: bounce 1.2s infinite ease-in-out;
+}
+.spinner-dots span:nth-child(2){ animation-delay:.2s; }
+.spinner-dots span:nth-child(3){ animation-delay:.4s; }
+@keyframes bounce { 0%,60%,100%{transform:translateY(0);} 30%{transform:translateY(-6px);} }
+.privacy-note {
+    background:#E3F2FD; color:#1565C0; padding:12px 16px; border-radius:8px;
+    font-size:0.85rem; margin-bottom:22px; border-left:4px solid #1565C0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<nav class="navbar">
+    <div class="nav-content">
+        <div class="nav-left">
+            <span class="logo-icon">🧘</span>
+            <span class="nav-brand">MindEase</span>
+        </div>
+        <div class="nav-right">
+            <a href="{{ url_for('dashboard') }}" class="btn-back">← Back</a>
+        </div>
+    </div>
+</nav>
+
+<div class="insights-container">
+    <h2 style="margin-bottom: 6px;">AI Wellness Insights</h2>
+    <p style="color: var(--text-light); margin-top: 0;">Personalised observations based on your wellness journey.</p>
+
+    <div class="privacy-note">
+        🔒 Your insights are generated from your trends and activity (assessment scores, journal
+        moods and topics) — never from the private content of your chat conversations.
+    </div>
+
+    <div class="insights-summary">
+        <div class="summary-box"><div class="num">{{ completed_count }}</div><div class="lbl">Sessions Completed</div></div>
+        <div class="summary-box"><div class="num">{{ avg_improvement }}%</div><div class="lbl">Avg Improvement</div></div>
+        <div class="summary-box"><div class="num">{{ total_journals }}</div><div class="lbl">Journal Entries</div></div>
+        <div class="summary-box"><div class="num">{{ total_breathing }}</div><div class="lbl">Breathing Exercises</div></div>
+    </div>
+
+    {% if has_data %}
+    <div class="insights-card">
+        <h3 style="margin-top: 0;">Your Insights</h3>
+        <p style="color: var(--text-light); font-size: 0.9rem;">Click below and our AI will analyse your progress.</p>
+        <button id="generateBtn" class="generate-btn" onclick="generateInsights()">✨ Generate My Insights</button>
+        <div id="insightsResult" style="margin-top: 20px;"></div>
+    </div>
+
+    {% if completed_count > 0 %}
+    <div class="insights-card">
+        <h3 style="margin-top: 0;">Before vs After — by Dimension</h3>
+        <p style="color: var(--text-light); font-size: 0.9rem;">Your average scores before and after sessions (stress &amp; anxiety: lower is better; mood, sleep &amp; energy: higher is better).</p>
+        <canvas id="dimChart" height="170"></canvas>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="insights-card" style="text-align:center; padding:50px 30px;">
+        <div style="font-size:42px; margin-bottom:12px;">🌱</div>
+        <p style="color:var(--text-light);">Once you complete a chat session or write a journal entry,
+        your personalised insights will appear here.</p>
+        <a href="{{ url_for('pre_assessment') }}" class="btn-primary" style="text-decoration:none;">Start a Session</a>
+    </div>
+    {% endif %}
+</div>
+
+{% if has_data %}
+<script>
+async function generateInsights() {
+    const btn = document.getElementById('generateBtn');
+    const result = document.getElementById('insightsResult');
+    btn.disabled = true;
+    btn.textContent = 'Analysing...';
+    result.innerHTML = '<div class="spinner-dots"><span></span><span></span><span></span></div>';
+
+    try {
+        const res = await fetch('{{ url_for("api_generate_insights") }}', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            // Split the AI text into separate insight cards (lines starting with "- ")
+            const lines = data.insights.split('\n').map(l => l.trim())
+                          .filter(l => l.length > 0);
+            let html = '';
+            lines.forEach(line => {
+                const text = line.replace(/^[-•*]\s*/, '');
+                html += '<div class="insight-item">' + escapeHtml(text) + '</div>';
+            });
+            result.innerHTML = html || '<div class="insight-item">' + escapeHtml(data.insights) + '</div>';
+        } else {
+            result.innerHTML = '<div class="insight-item">' + escapeHtml(data.insights || 'Could not generate insights.') + '</div>';
+        }
+    } catch (e) {
+        result.innerHTML = '<div class="insight-item">Network error. Please try again.</div>';
+    }
+    btn.disabled = false;
+    btn.textContent = '✨ Regenerate Insights';
+}
+
+function escapeHtml(t) {
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+}
+</script>
+{% endif %}
+
+{% if completed_count > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+new Chart(document.getElementById('dimChart'), {
+    type: 'bar',
+    data: {
+        labels: {{ dim_labels | tojson }},
+        datasets: [
+            { label: 'Before', data: {{ pre_avgs | tojson }}, backgroundColor: '#ef4444' },
+            { label: 'After',  data: {{ post_avgs | tojson }}, backgroundColor: '#22c55e' }
+        ]
+    },
+    options: { responsive: true, scales: { y: { beginAtZero: true, max: 5 } } }
+});
+</script>
+{% endif %}
+{% endblock %}

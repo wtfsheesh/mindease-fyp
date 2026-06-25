@@ -193,6 +193,18 @@ check("Admin delete user", user_gone)
 r = admin_client.get("/admin/analytics")
 check("Admin analytics page", r.status_code == 200 and b"growthChart" in r.data and b"moodChart" in r.data)
 
+# 20b. AI Wellness Insights (re-login: client was logged out earlier)
+client.post("/login", data={"email": EMAIL, "password": PASSWORD}, follow_redirects=True)
+r = client.get("/insights")
+check("Insights page", r.status_code == 200 and b"AI Wellness Insights" in r.data)
+# dashboard links to it
+r = client.get("/dashboard")
+check("Dashboard links to insights", b"/insights" in r.data)
+# generate-insights API returns text (may be AI or graceful fallback - both fine)
+r = client.post("/api/generate-insights")
+data = r.get_json()
+check("Generate insights API", r.status_code == 200 and "insights" in data and len(data["insights"]) > 0)
+
 # 21. Mood-adaptive quotes (re-login: client was logged out above)
 client.post("/login", data={"email": EMAIL, "password": PASSWORD}, follow_redirects=True)
 r = client.get("/dashboard")

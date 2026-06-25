@@ -758,6 +758,106 @@ def random_quote():
         'emotion': emotion or 'Neutral'
     })
 
+# ============================================================================
+# AI WELLNESS INSIGHTS (analyses the user's own trends - metadata only)
+# ============================================================================
+
+@app.route('/insights')
+@login_required
+def insights():
+    """
+    Insights page - shows a data summary and a personalised before/after
+    chart. The AI narrative is generated on demand via the API below.
+    """
+    uid = current_user.id
+    completed = ChatSession.query.filter_by(user_id=uid).filter(
+        ChatSession.end_time.isnot(None)
+    ).all()
+    total_sessions = ChatSession.query.filter_by(user_id=uid).count()
+    total_journals = JournalEntry.query.filter_by(user_id=uid).count()
+    total_breathing = BreathingSession.query.filter_by(user_id=uid).count()
+
+    # Personalised per-dimension before/after averages (the chart)
+    dims = ['stress_level', 'mood', 'sleep_quality', 'energy_level', 'anxiety_level']
+    dim_labels = ['Stress', 'Mood', 'Sleep', 'Energy', 'Anxiety']
+    pre_vals = {d: [] for d in dims}
+    post_vals = {d: [] for d in dims}
+    improvements = []
+    for s in completed:
+        if s.pre_survey and s.post_survey:
+            for d in dims:
+                pre_vals[d].append(getattr(s.pre_survey, d))
+                post_vals[d].append(getattr(s.post_survey, d))
+            eff = calculate_effectiveness(s.id)
+            if eff:
+                improvements.append(eff['overall_improvement'])
+
+    pre_avgs = [round(sum(pre_vals[d]) / len(pre_vals[d]), 2) if pre_vals[d] else 0 for d in dims]
+    post_avgs = [round(sum(post_vals[d]) / len(post_vals[d]), 2) if post_vals[d] else 0 for d in dims]
+    avg_improvement = round(sum(improvements) / len(improvements), 1) if improvements else 0
+
+    return render_template('insights.html',
+                           total_sessions=total_sessions,
+                           completed_count=len(completed),
+                           total_journals=total_journals,
+                           total_breathing=total_breathing,
+                           avg_improvement=avg_improvement,
+                           dim_labels=dim_labels, pre_avgs=pre_avgs, post_avgs=post_avgs,
+                           has_data=(len(completed) > 0 or total_journals > 0))
+
+@app.route('/api/generate-insights', methods=['POST'])
+@login_required
+def api_generate_insights():
+    """
+    Build a privacy-conscious data summary (metadata and trends only - never
+    the content of chat conversations) and ask the AI to surface insights.
+    """
+    from collections import Counter
+    uid = current_user.id
+    completed = ChatSession.query.filter_by(user_id=uid).filter(
+        ChatSession.end_time.isnot(None)
+    ).order_by(ChatSession.start_time).all()
+    journals = JournalEntry.query.filter_by(user_id=uid).order_by(JournalEntry.created_at).all()
+    breathing = BreathingSession.query.filter_by(user_id=uid).all()
+
+    lines = [f"Completed chat sessions: {len(completed)}"]
+    if completed:
+        lines.append("Per-session distress score before -> after (lower is better):")
+        for s in completed:
+            eff = calculate_effectiveness(s.id)
+            if eff:
+                lines.append(f"  {s.start_time.strftime('%Y-%m-%d %a')}: "
+                             f"{eff['pre_total']} -> {eff['post_total']} "
+                             f"({eff['overall_improvement']}% change)")
+        for attr, label in [('stress_level', 'Stress'), ('mood', 'Mood'),
+                            ('sleep_quality', 'Sleep'), ('energy_level', 'Energy'),
+                            ('anxiety_level', 'Anxiety')]:
+            pres = [getattr(s.pre_survey, attr) for s in completed if s.pre_survey]
+            posts = [getattr(s.post_survey, attr) for s in completed if s.post_survey]
+            if pres and posts:
+                lines.append(f"  Avg {label} (1-5): before {round(sum(pres)/len(pres), 1)}, "
+                             f"after {round(sum(posts)/len(posts), 1)}")
+
+    lines.append(f"Journal entries: {len(journals)}")
+    if journals:
+        moods = Counter(j.mood or 'Unspecified' for j in journals)
+        lines.append("  Journal moods: " + ", ".join(f"{m} x{c}" for m, c in moods.items()))
+        titles = [j.title for j in journals[-8:]]
+        lines.append("  Recent journal topics (titles only): " + "; ".join(titles))
+
+    lines.append(f"Breathing exercises completed: {len(breathing)}")
+    if breathing:
+        techs = Counter(b.technique for b in breathing)
+        lines.append("  Techniques used: " + ", ".join(f"{t} x{c}" for t, c in techs.items()))
+
+    summary = "\n".join(lines)
+
+    if not chatbot:
+        return jsonify({'success': False, 'insights': 'AI service is not available.'})
+
+    insights_text = chatbot.generate_insights(summary)
+    return jsonify({'success': True, 'insights': insights_text})
+
 @app.route('/journal/entries')
 @login_required
 def journal_entries():

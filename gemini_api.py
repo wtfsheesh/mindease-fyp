@@ -102,22 +102,25 @@ class GeminiChatbot:
 
         full_prompt = f"{system_context}{history_text}User: {user_message}\nMindEase:"
 
-        # Try each model in order, and within each model try every API key.
-        # Free-tier quotas are per model AND per project (key), so a 429 on
-        # one combination does not mean the others are exhausted.
+        result = self._generate(full_prompt)
+        return result or "I am right here listening to you. Tell me a bit more about what's on your mind."
+
+    def _generate(self, prompt, max_tokens=1024):
+        """
+        Send a prompt to Gemini, trying each model and each API key in turn.
+        Free-tier quotas are per model AND per project (key), so a 429 on one
+        combination does not mean the others are exhausted. Returns the reply
+        text, or None if every model/key combination failed.
+        """
         for model in self.models:
-            generation_config = {
-                "temperature": 0.7,
-                "maxOutputTokens": 1024
-            }
-            # 2.5 models spend invisible "thinking" tokens that count against
-            # maxOutputTokens and can truncate the visible reply mid-sentence.
-            # A zero thinking budget gives the whole budget to the answer.
+            generation_config = {"temperature": 0.7, "maxOutputTokens": max_tokens}
+            # 2.5 models spend invisible "thinking" tokens against the output
+            # budget and can truncate mid-sentence; give the whole budget to text.
             if model.startswith("gemini-2.5"):
                 generation_config["thinkingConfig"] = {"thinkingBudget": 0}
 
             payload = {
-                "contents": [{"parts": [{"text": full_prompt}]}],
+                "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": generation_config
             }
             data_bytes = json.dumps(payload).encode('utf-8')
@@ -142,8 +145,31 @@ class GeminiChatbot:
                 except Exception as e:
                     print(f"[API LOG] {model} (key {i+1}): {e}", flush=True)
                     continue
+        return None
 
-        return "I am right here listening to you. Tell me a bit more about what's on your mind."
+    def generate_insights(self, data_summary):
+        """
+        AI Wellness Insights: analyse the user's structured wellness data
+        (assessment trends, journal moods, activity counts) and return
+        personalised observations. Uses only metadata/trends - never the
+        private content of chat conversations.
+        """
+        prompt = (
+            "You are MindEase's wellness insights assistant. Analyse ONLY the "
+            "user's wellness data below and write 3 to 4 short, warm, specific "
+            "insights for the user about their stress patterns, possible "
+            "triggers, what seems to be helping, and one gentle suggestion.\n"
+            "Rules:\n"
+            "- Base everything strictly on the data provided; do NOT invent numbers.\n"
+            "- Address the user as 'you'. Keep each insight to 1-2 sentences.\n"
+            "- Plain text only, no emojis. Begin each insight on its own line with '- '.\n"
+            "- If there is very little data, gently say that more sessions and journal "
+            "entries will reveal clearer patterns.\n\n"
+            f"WELLNESS DATA:\n{data_summary}\n\nINSIGHTS:"
+        )
+        result = self._generate(prompt, max_tokens=600)
+        return result or ("Insights couldn't be generated right now (the AI service "
+                          "may be busy). Please try again in a moment.")
 
     def get_conversation_starter(self, stress_level):
         if stress_level >= 4:
