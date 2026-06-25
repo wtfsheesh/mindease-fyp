@@ -49,9 +49,9 @@ class GeminiChatbot:
         return (
             "I'm really concerned about what you're sharing with me. "
             "Please reach out for immediate support:\n\n"
-            "🆘 Befrienders Malaysia: 03-7956-8145 (24/7)\n"
-            "🚨 Emergency: 999\n"
-            "🏫 MMU Counseling Centre: 03-8312-5798\n\n"
+            "Befrienders Malaysia: 03-7956-8145 (available 24/7)\n"
+            "Emergency: 999\n"
+            "MMU Counselling Centre: 03-8312-5798\n\n"
             "You are not alone, and help is available right now. Please reach out to them."
         )
 
@@ -89,6 +89,7 @@ class GeminiChatbot:
             "- Never put words in their mouth or state their emotions as fact. Ask open, gentle "
             "questions instead of assuming.\n"
             "- Keep replies warm and concise (2-3 sentences).\n"
+            "- Use plain text only. Do not use emojis.\n"
             f"- Tone guidance (background only, do not mention it): {tone}\n\n"
         )
 
@@ -147,19 +148,19 @@ class GeminiChatbot:
     def get_conversation_starter(self, stress_level):
         if stress_level >= 4:
             return (
-                "Hi, I'm really glad you're here. 💙 It sounds like things have been quite tough lately — "
+                "Hi, I'm really glad you're here. It sounds like things have been quite tough lately - "
                 "a stress level of " + str(stress_level) + " out of 5 tells me you're carrying a lot right now. "
                 "I'm here to listen without judgment. Take a breath, and whenever you're ready, tell me what's been going on."
             )
         elif stress_level == 3:
             return (
-                "Hey, welcome! 😊 I can see you're feeling moderately stressed today (level " + str(stress_level) + "/5). "
-                "That's completely okay — life gets overwhelming sometimes. "
+                "Hey, welcome. I can see you're feeling moderately stressed today (level " + str(stress_level) + "/5). "
+                "That's completely okay - life gets overwhelming sometimes. "
                 "I'm here to chat and support you. What's been on your mind lately?"
             )
         else:
             return (
-                "Hello! Great to see you today. 🌟 You're starting at a stress level of " + str(stress_level) + "/5, "
+                "Hello, good to see you today. You're starting at a stress level of " + str(stress_level) + "/5, "
                 "which sounds manageable. I'm here to help you maintain that positive momentum. "
                 "What would you like to talk about or work on today?"
             )
