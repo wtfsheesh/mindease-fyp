@@ -2,10 +2,40 @@
 
 {% block title %}Chat Session - MindEase{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Collapsible sidebar */
+.sidebar-toggle {
+    background: var(--bg-gray);
+    border: 1px solid var(--border-gray);
+    border-radius: 6px;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 6px 11px;
+    cursor: pointer;
+    margin-right: 4px;
+}
+.sidebar-toggle:hover { background: #e8edf2; }
+
+/* Smoothly hide the sidebar when collapsed; chat-main (flex:1) fills the gap */
+.chat-sidebar {
+    overflow: hidden;
+    transition: width 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+}
+.chat-container.sidebar-collapsed .chat-sidebar {
+    width: 0;
+    padding: 20px 0;
+    opacity: 0;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <nav class="navbar">
     <div class="nav-content">
         <div class="nav-left">
+            <button id="sidebarToggle" onclick="toggleSidebar()" class="sidebar-toggle" title="Show/hide panel" aria-label="Toggle side panel">☰</button>
             <span class="logo-icon">🧘</span>
             <span class="nav-brand">MindEase - Chat Session</span>
         </div>
@@ -76,6 +106,18 @@
 <script>
 // Store session ID for AJAX calls
 const SESSION_ID = {{ session_id }};
+
+// Collapsible sidebar — toggle and remember the choice across sessions
+function toggleSidebar() {
+    const container = document.querySelector('.chat-container');
+    container.classList.toggle('sidebar-collapsed');
+    localStorage.setItem('mindease_sidebar_collapsed',
+        container.classList.contains('sidebar-collapsed') ? '1' : '0');
+}
+// Restore the saved state on page load
+if (localStorage.getItem('mindease_sidebar_collapsed') === '1') {
+    document.querySelector('.chat-container').classList.add('sidebar-collapsed');
+}
 
 // Start session timer
 let seconds = 0;
