@@ -59,6 +59,13 @@
         }
         .btn-back { color: var(--primary-blue); }
 
+        /* Consistent top navigation links across feature pages */
+        .nav-links { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .nav-links a { color: var(--text-light); text-decoration: none; font-weight: 500; font-size: 0.92rem; }
+        .nav-links a:hover { color: var(--primary-blue); }
+        .nav-links a.active { color: var(--primary-blue); font-weight: 700; }
+        .nav-links a.btn-logout { color: #ef4444; }
+
         /* Dashboard & Structural Page Containers */
         .dashboard-container, .assessment-container {
             max-width: 1200px;

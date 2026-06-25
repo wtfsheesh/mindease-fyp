@@ -63,8 +63,13 @@
             <span class="logo-icon">🧘</span>
             <span class="nav-brand">MindEase</span>
         </div>
-        <div class="nav-right">
-            <a href="{{ url_for('dashboard') }}" class="btn-back">← Back</a>
+        <div class="nav-right nav-links">
+            <a href="{{ url_for('dashboard') }}" {% if request.endpoint == 'dashboard' %}class="active"{% endif %}>Dashboard</a>
+            <a href="{{ url_for('insights') }}" {% if request.endpoint == 'insights' %}class="active"{% endif %}>Insights</a>
+            <a href="{{ url_for('history') }}" {% if request.endpoint == 'history' %}class="active"{% endif %}>History</a>
+            <a href="{{ url_for('breathing') }}" {% if request.endpoint == 'breathing' %}class="active"{% endif %}>Breathing</a>
+            <a href="{{ url_for('journal_entries') }}" {% if request.endpoint in ['journal_entries', 'journal', 'journal_edit'] %}class="active"{% endif %}>Journal</a>
+            <a href="{{ url_for('logout') }}" class="btn-logout">Logout</a>
         </div>
     </div>
 </nav>
